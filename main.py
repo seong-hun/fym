@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.linalg as nla
 
-from core import BaseEnvironment, BaseSystem
+from nrfsim.core import BaseEnvironment, BaseSystem
 
 
 class Aircraft3Dof(BaseSystem):
