@@ -1,13 +1,15 @@
 from collections import OrderedDict
 import numpy as np
+import gym
 
 
-class BaseEnvironment:
-    def __init__(self, systems: list, rk4_steps=2):
+class BaseEnv(gym.Env):
+    def __init__(self, systems: list, dt, rk4_steps=2):
         self.systems = OrderedDict({s.name: s for s in systems})
         self.state_index = np.cumsum([system.state_size for system in systems])
         self.control_index = np.cumsum([system.control_size for system in systems])
         self.rk4_steps = rk4_steps
+        self.dt = dt
 
     def reset(self):
         initial_states = {
@@ -15,15 +17,19 @@ class BaseEnvironment:
         }
         self.states = initial_states
         self.clock = 0
-        return initial_states
+        return self.get_ob()
 
-    def step(self, controls, dt):
+    def step(self, controls):
         xs = np.hstack(list(self.states.values()))
         us = np.hstack(list(controls.values()))
         t = self.clock
 
         try:
-            nxs = rk4(self.derivs, xs, t + np.linspace(0, dt, self.rk4_steps), us)
+            nxs = rk4(
+                self.derivs,
+                xs,
+                t + np.linspace(0, self.dt, self.rk4_steps), us
+            )
         except ValueError:
             nxs = [None]
             reward = -1
@@ -33,23 +39,23 @@ class BaseEnvironment:
         next_states = self.resolve(nxs, self.state_index)
 
         # Reward and terminal
-        reward = self._get_reward(self.states, controls, next_states)
-        terminal = self._terminal()
+        reward = self.get_reward(self.states, controls)
+        terminal = self.terminal()
 
         # Update internal state and clock
         self.states = next_states
-        self.clock = t + dt
+        self.clock = t + self.dt
 
-        return (self._get_ob(), reward, terminal, {})
+        return (self.get_ob(), reward, terminal, {})
 
-    def _get_reward(self, states, controls, next_states):
-        return 0 if self._terminal() else -1
+    def get_reward(self, states, controls, next_states):
+        raise NotImplementedError("Reward function is not defined in the Env.")
 
-    def _terminal(self):
-        return False
+    def terminal(self):
+        raise NotImplementedError("Terminal is not defined in the Env.")
 
-    def _get_ob(self):
-        return self.states
+    def get_ob(self):
+        raise NotImplementedError("Observation is not defined in the Env.")
 
     def resolve(self, ss, index):
         *ss, _ = np.split(ss, index)
@@ -80,6 +86,9 @@ class BaseSystem:
         self.control_size = control_size
         if callable(deriv):
             self.deriv = deriv
+
+    def deriv(self):
+        raise NotImplementedError("deriv method is not defined in the system.")
 
     def reset(self):
         return self.initial_state
