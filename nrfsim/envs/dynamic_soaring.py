@@ -2,8 +2,8 @@ import numpy as np
 import gym
 from gym import spaces
 
-from ..models.aircraft import Aircraft3Dof
-from ..core import BaseEnv
+from nrfsim.models.aircraft import Aircraft3Dof
+from nrfsim.core import BaseEnv
 
 
 class Wind:
