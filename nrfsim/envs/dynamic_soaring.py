@@ -37,10 +37,10 @@ class DynamicSoaringEnv(BaseEnv):
 
         super().__init__(systems=[aircraft], dt=0.01)
 
-        low = np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf, -np.inf])
+        low = np.array([-np.inf, -np.inf, -np.inf, -np.inf])
         high = -low
         self.observation_space = gym.spaces.Box(
-            low=low, high=high, dtype=np.float64
+            low=low, high=high, dtype=np.float32
         )
         self.action_space = gym.spaces.Box(
             low=np.array([-0.3, np.deg2rad(-60)]),
@@ -49,7 +49,9 @@ class DynamicSoaringEnv(BaseEnv):
         )
 
     def step(self, action):
-        controls = dict(aircraft=np.asarray(action))
+        lb, ub = self.action_space.low, self.action_space.high
+        aircraft_control = (lb + ub)/2 + (ub - lb)/2*np.asarray(action)
+        controls = dict(aircraft=aircraft_control)
         return super().step(controls)
 
     def get_ob(self):
@@ -69,7 +71,7 @@ class DynamicSoaringEnv(BaseEnv):
         state = states['aircraft'][2:]
         goal_state = [-5, 10, 0, 0]
         error = self.weight_norm(state - goal_state, [0.02, 0.01, 1, 1])
-        return error
+        return -error
 
     def weight_norm(self, v, W):
         if np.asarray(W).ndim == 1:
