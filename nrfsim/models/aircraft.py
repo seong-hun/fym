@@ -24,13 +24,6 @@ class Aircraft3Dof(BaseSystem):
         super().__init__(self.name, initial_state, self.control_size)
         self.wind = wind
 
-    def reset(self):
-        initial_states = (
-            super().reset()
-            + [0, 0, 0, 4, 1, 1]*np.random.uniform(-1, 1, self.state_size)
-        )
-        return initial_states
-
     def external(self, states, controls):
         state = states['aircraft']
         return dict(wind=self.wind.get(state))

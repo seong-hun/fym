@@ -16,8 +16,9 @@ class Wind:
         _, _, z, V, gamma, _ = state
         h = -z
 
-        if h < 0:
-            raise ValueError(f'Negative height {h}')
+        # if h < 0:
+        #     raise ValueError(f'Negative height {h}')
+        h = max(h, self.h0)
 
         Wy = self.Wref*np.log(h/self.h0)/np.log(self.href/self.h0)
         dWyds = -self.Wref/h/np.log(self.href/self.h0)
@@ -28,14 +29,11 @@ class Wind:
 
 
 class DynamicSoaringEnv(BaseEnv):
-    def __init__(self):
-        wind = Wind(Wref=10, href=10, h0=0.03)
-        aircraft = Aircraft3Dof(
-            initial_state=[0, 0, -1, 10, -0.5, 0],
-            wind=wind
-        )
+    def __init__(self, initial_state, dt=0.01, Wref=10, href=10, h0=0.03):
+        wind = Wind(Wref, href, h0)
+        aircraft = Aircraft3Dof(initial_state=initial_state, wind=wind)
 
-        super().__init__(systems=[aircraft], dt=0.01)
+        super().__init__(systems=[aircraft], dt=dt)
 
         low = np.array([-np.inf, -np.inf, -np.inf, -np.inf])
         high = -low
@@ -48,11 +46,19 @@ class DynamicSoaringEnv(BaseEnv):
             dtype=np.float32,
         )
 
+    def reset(self, noise=0):
+        super().reset()
+        self.states['aircraft'] += np.random.uniform(-noise, noise)
+        return self.get_ob()
+
     def step(self, action):
         lb, ub = self.action_space.low, self.action_space.high
         aircraft_control = (lb + ub)/2 + (ub - lb)/2*np.asarray(action)
         controls = dict(aircraft=aircraft_control)
-        return super().step(controls)
+        states = self.states.copy()
+        next_obs, reward, done, _ = super().step(controls)
+        info = {'states': states, 'next_states': self.states}
+        return next_obs, reward, done, info
 
     def get_ob(self):
         states = self.states['aircraft']
