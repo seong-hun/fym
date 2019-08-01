@@ -7,21 +7,22 @@ from nrfsim.core import BaseEnv
 
 
 class StationaryTargetInterceptionEnv(BaseEnv):
+    g = 9.80665
     def __init__(self, initial_state, dt=0.01):
         missile = MissilePlanar(initial_state=initial_state)
 
-        super().__init__(systems=[missile], dt=dt)
-
-        low = np.array([-np.inf, -np.inf, -np.inf, -np.inf])
-        high = -low
-        self.observation_space = gym.spaces.Box(
-            low=low, high=high, dtype=np.float32
-        )
-        self.action_space = gym.spaces.Box(
-            low=np.array([np.deg2rad(-60)]),
-            high=np.array([np.deg2rad(60)]),
+        obs_sp = gym.spaces.Box(
+            low=np.array([-np.inf, -np.inf, -np.inf, -np.inf]),
+            high=np.array([np.inf, np.inf, np.inf, np.inf]),
             dtype=np.float32,
         )
+        act_sp = gym.spaces.Box(
+            low=np.array([-10*self.g]),
+            high=np.array([10*self.g]),
+            dtype=np.float32,
+        )
+
+        super().__init__(systems=[missile], dt=dt, obs_sp=obs_sp, act_sp=act_sp)
 
     def reset(self, noise=0):
         super().reset()
