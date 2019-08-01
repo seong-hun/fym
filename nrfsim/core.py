@@ -46,7 +46,7 @@ class BaseEnv(gym.Env):
         next_states = self.resolve(nxs, self.state_index)
 
         # Reward and terminal
-        reward = self.get_reward(self.states, controls)
+        reward = self.get_reward(controls)
         terminal = self.terminal()
 
         # Update internal state and clock
@@ -98,7 +98,7 @@ class BaseSystem:
         if callable(deriv):
             self.deriv = deriv
 
-    def deriv(self):
+    def deriv(self, state, t, control, external):
         raise NotImplementedError("deriv method is not defined in the system.")
 
     def reset(self):
