@@ -5,6 +5,7 @@ from gym import spaces
 from nrfsim.models.missile import MissilePlanar
 from nrfsim.core import BaseEnv
 
+
 class StationaryTargetInterceptionEnv(BaseEnv):
     def __init__(self, initial_state, dt=0.01):
         missile = MissilePlanar(initial_state=initial_state)
