@@ -11,7 +11,7 @@ class BaseEnv(gym.Env):
         self.state_index = np.cumsum([system.state_size for system in systems])
         self.control_index = np.cumsum([system.control_size for system in systems])
 
-        # Necessary for gym.Env
+        # Necessary properties for gym.Env
         self.observation_space = obs_sp
         self.action_space = act_sp
 
@@ -72,8 +72,12 @@ class BaseEnv(gym.Env):
     def derivs(self, xs, t, us):
         """
         Returns:
-            *ds*: ndarray
-                An array with the same shape as *state*
+            *xs*: ndarray
+                An array of aggregated states.
+            *t*: float
+                The time when the derivatives calculated.
+            *us*: ndarray
+                An array of aggregated control inputs.
         """
         states = self.resolve(xs, self.state_index)
         controls = self.resolve(us, self.control_index)
