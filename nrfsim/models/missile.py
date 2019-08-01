@@ -18,13 +18,13 @@ class MissilePlanar(BaseSystem):
     control_lower_bound = [-10*g],
     control_upper_bound = [10*g],
 
-    def __init__(self, initial_state, wind):
+    def __init__(self, initial_state):
         super().__init__(self.name, initial_state, self.control_size)
-        self.wind = wind
 
     def external(self, states, controls):
         state = states['missile']
-        return {"wind" : [(0, 0), (0, 0)]} # no external effects
+        return 0
+        # return {"wind" : [(0, 0), (0, 0)]} # no external effects
 
     def deriv(self, state, t, control, external):
         # state and (control) input
@@ -41,15 +41,15 @@ class MissilePlanar(BaseSystem):
         if t < self.t1:
             m = 135 - 14.53*t
             T = 33000
-        elif t < t2:
+        elif t < self.t2:
             m = 113.205 - 3.331*t
             T = 7500
         else:
             m = 90.035
             T = 0
         # density and dynamic pressure
-        rho = (1.15579 - 1.058*1e-4*z + 3.725*1e-9*z**2 
-            - 6.0*1e-14*z**3)      # z in [0, 20000]
+        rho = (1.15579 - 1.058*1e-4*y + 3.725*1e-9*y**2 
+            - 6.0*1e-14*y**3)      # y in [0, 20000]
         Q = 0.5*rho*V**2;
         # Drag model
         if M < 0.93:
@@ -69,11 +69,11 @@ class MissilePlanar(BaseSystem):
         D0 = Cd0*Q*self.S;
         Di = K*m**2*a**2/(Q*self.S)
         D = D0 + Di
-        (_, _), (_, _) = external['wind']
 
         dxdt = V*np.cos(gamma)
         dydt = V*np.sin(gamma)
         dVdt = (T - D)/m - self.g*np.sin(gamma)
         dgammadt = (a - self.g*np.cos(gamma))/V
 
-        return np.array([dxdt, dydt, dVdt, dgammadt])
+        # import ipdb; ipdb.set_trace()
+        return np.hstack([dxdt, dydt, dVdt, dgammadt])
