@@ -35,7 +35,7 @@ class MissilePlanar(BaseSystem):
             Tmp = 288.16 - 0.0065*y
         else:
             Tmp = 216.66
-        # Mark number
+        # Mach number
         M = V/(1.4*self.R*Tmp)**0.5
         # Mass and thrust (Note: guidance loop is closed after t=t1)
         if t < self.t1:
@@ -49,8 +49,8 @@ class MissilePlanar(BaseSystem):
             T = 0
         # density and dynamic pressure
         rho = (1.15579 - 1.058*1e-4*y + 3.725*1e-9*y**2 
-            - 6.0*1e-14*y**3)      # y in [0, 20000]
-        Q = 0.5*rho*V**2;
+               -6.0*1e-14*y**3)      # y in [0, 20000]
+        Q = 0.5*rho*V**2
         # Drag model
         if M < 0.93:
             Cd0 = 0.02
@@ -66,7 +66,7 @@ class MissilePlanar(BaseSystem):
         else:
             K = 0.2 + 0.246*(M - 1.15)
 
-        D0 = Cd0*Q*self.S;
+        D0 = Cd0*Q*self.S
         Di = K*m**2*a**2/(Q*self.S)
         D = D0 + Di
 

@@ -9,7 +9,7 @@ np.random.seed(1)
 
 env = StationaryTargetInterceptionEnv(
     initial_state=np.array([-10e3, 0, 200, np.deg2rad(30)]).astype('float')
-        )
+)
 
 time_step = 0.01
 t0 = 0      # launch time (no guidance loop)
