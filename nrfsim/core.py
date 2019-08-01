@@ -55,13 +55,13 @@ class BaseEnv(gym.Env):
 
         return (self.get_ob(), reward, terminal, {})
 
-    def get_reward(self, states, controls, next_states):
+    def get_reward(self, controls: dict) -> float:
         raise NotImplementedError("Reward function is not defined in the Env.")
 
-    def terminal(self):
+    def terminal(self) -> bool:
         raise NotImplementedError("Terminal is not defined in the Env.")
 
-    def get_ob(self):
+    def get_ob(self) -> np.ndarray:
         raise NotImplementedError("Observation is not defined in the Env.")
 
     def resolve(self, ss, index):
