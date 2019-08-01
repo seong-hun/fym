@@ -4,10 +4,17 @@ import gym
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems: list, dt, rk4_steps=2):
+    def __init__(self, systems: list, dt: float,
+                 obs_sp: gym.spaces.Space, act_sp: gym.spaces.Space,
+                 rk4_steps: int=2):
         self.systems = OrderedDict({s.name: s for s in systems})
         self.state_index = np.cumsum([system.state_size for system in systems])
         self.control_index = np.cumsum([system.control_size for system in systems])
+
+        # Necessary for gym.Env
+        self.observation_space = obs_sp
+        self.action_space = act_sp
+
         self.rk4_steps = rk4_steps
         self.dt = dt
 
