@@ -32,7 +32,6 @@ class BaseEnv(gym.Env):
         t = self.clock
 
         try:
-            import ipdb; ipdb.set_trace()
             nxs = rk4(
                 self.derivs,
                 xs,
