@@ -78,8 +78,8 @@ class DynamicSoaringEnv(BaseEnv):
         else:
             return False
 
-    def get_reward(self, states, controls):
-        state = states['aircraft'][2:]
+    def get_reward(self, controls):
+        state = self.states['aircraft'][2:]
         goal_state = [-5, 10, 0, 0]
         error = self.weight_norm(state - goal_state, [0.02, 0.01, 1, 1])
         return -error
