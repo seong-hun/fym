@@ -5,33 +5,9 @@ from gym import spaces
 from nrfsim.models.missile import MissilePlanar
 from nrfsim.core import BaseEnv
 
-
-class Wind:
-    def __init__(self, Wref=10, href=10, h0=0.03):
-        self.Wref = Wref
-        self.href = href
-        self.h0 = h0
-
-    def get(self, state):
-        _, y, V, gamma = state
-        h = y
-
-        # if h < 0:
-        #     raise ValueError(f'Negative height {h}')
-        h = max(h, self.h0)
-
-        Wy = self.Wref*np.log(h/self.h0)/np.log(self.href/self.h0)
-        dWyds = -self.Wref/h/np.log(self.href/self.h0)
-
-        vel = [0, Wy]
-        grad = [0, dWyds]
-        return vel, grad
-
-
 class StationaryTargetInterceptionEnv(BaseEnv):
-    def __init__(self, initial_state, dt=0.01, Wref=10, href=10, h0=0.03):
-        wind = Wind(Wref, href, h0)
-        missile = MissilePlanar(initial_state=initial_state, wind=wind)
+    def __init__(self, initial_state, dt=0.01):
+        missile = MissilePlanar(initial_state=initial_state)
 
         super().__init__(systems=[missile], dt=dt)
 
@@ -62,22 +38,21 @@ class StationaryTargetInterceptionEnv(BaseEnv):
 
     def get_ob(self):
         states = self.states['missile']
-        return states[2:]
+        return states
 
     def terminal(self):
         state = self.states['missile']
         system = self.systems['missile']
         lb, ub = system.state_lower_bound, system.state_upper_bound
-        # import ipdb; ipdb.set_trace()
         if not np.all([state > lb, state < ub]):
             return True
         else:
             return False
 
     def get_reward(self, states, controls):
-        state = states['missile'][2:]
-        goal_state = [-5, 10, 0, 0]
-        error = self.weight_norm(state - goal_state, [0.02, 0.01, 1, 1])
+        state = states['missile'][:2]
+        goal_state = [0, 0] # target position
+        error = self.weight_norm(state - goal_state, [1, 1])
         return -error
 
     def weight_norm(self, v, W):
