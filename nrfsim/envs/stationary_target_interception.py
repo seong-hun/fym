@@ -30,9 +30,14 @@ class StationaryTargetInterceptionEnv(BaseEnv):
         return self.get_ob()
 
     def step(self, action):
+        # ----------------------------------------------------------------------
+        # These lines will be replaced with
+        #   controls = dict(aircraft=action)
         lb, ub = self.action_space.low, self.action_space.high
         missile_control = (lb + ub)/2 + (ub - lb)/2*np.asarray(action)
         controls = dict(missile=missile_control)
+        # ----------------------------------------------------------------------
+
         states = self.states.copy()
         next_obs, reward, done, _ = super().step(controls)
         info = {'states': states, 'next_states': self.states}
@@ -51,8 +56,8 @@ class StationaryTargetInterceptionEnv(BaseEnv):
         else:
             return False
 
-    def get_reward(self, states, controls):
-        state = states['missile'][:2]
+    def get_reward(self, controls):
+        state = self.states['missile'][:2]
         goal_state = [0, 0] # target position
         error = self.weight_norm(state - goal_state, [1, 1])
         return -error
