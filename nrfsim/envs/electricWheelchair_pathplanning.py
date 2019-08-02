@@ -7,12 +7,13 @@ from nrfsim.core import BaseEnv
 
 class ElectricWheelchairEnv(BaseEnv):
     def __init__(self, initial_state, mload, rGBb, dt=0.01):
-        import ipdb; ipdb.set_trace()
+        
         electricWheelchair = ElectricWheelchair(initial_state=initial_state, mload=mload, rGBb = rGBb)
+        #import ipdb; ipdb.set_trace()
         super().__init__(systems=[electricWheelchair], dt=dt)
 
         low = np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf,
-                        -np.inf, -np.inf, -np.inf, -np.inf, -np.pi,
+                        -np.inf, -np.pi,
                         -np.pi, -np.pi, -np.inf, -np.inf, -np.inf, 
                         -np.pi, -np.pi])
         high = -low
@@ -35,6 +36,7 @@ class ElectricWheelchairEnv(BaseEnv):
         electricWheelchair_control = np.asarray(action)
         controls = dict(electricWheelchair=electricWheelchair_control)
         states = self.states.copy()
+        #import ipdb; ipdb.set_trace()
         next_obs, reward, done, _ = super().step(controls)
         info = {'states': states, 'next_states': self.states}
         return next_obs, reward, done, info
@@ -47,6 +49,7 @@ class ElectricWheelchairEnv(BaseEnv):
         state = self.states['electricWheelchair']
         system = self.systems['electricWheelchair']
         lb, ub = system.state_lower_bound, system.state_upper_bound
+        import ipdb; ipdb.set_trace()
         if not np.all([state > lb, state < ub]):
             return True
         else:
