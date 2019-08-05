@@ -46,6 +46,7 @@ class BaseEnv(gym.Env):
         next_states = self.resolve(nxs, self.state_index)
 
         # Reward and terminal
+
         reward = self.get_reward(controls)
         terminal = self.terminal()
 
