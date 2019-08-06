@@ -4,10 +4,17 @@ import gym
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems: list, dt, rk4_steps=2):
+    def __init__(self, systems: list, dt: float,
+                 obs_sp: gym.spaces.Space, act_sp: gym.spaces.Space,
+                 rk4_steps: int=2):
         self.systems = OrderedDict({s.name: s for s in systems})
         self.state_index = np.cumsum([system.state_size for system in systems])
         self.control_index = np.cumsum([system.control_size for system in systems])
+
+        # Necessary properties for gym.Env
+        self.observation_space = obs_sp
+        self.action_space = act_sp
+
         self.rk4_steps = rk4_steps
         self.dt = dt
 
@@ -39,7 +46,8 @@ class BaseEnv(gym.Env):
         next_states = self.resolve(nxs, self.state_index)
 
         # Reward and terminal
-        reward = self.get_reward(self.states, controls)
+
+        reward = self.get_reward(controls)
         terminal = self.terminal()
 
         # Update internal state and clock
@@ -48,13 +56,13 @@ class BaseEnv(gym.Env):
 
         return (self.get_ob(), reward, terminal, {})
 
-    def get_reward(self, states, controls, next_states):
+    def get_reward(self, controls: dict) -> float:
         raise NotImplementedError("Reward function is not defined in the Env.")
 
-    def terminal(self):
+    def terminal(self) -> bool:
         raise NotImplementedError("Terminal is not defined in the Env.")
 
-    def get_ob(self):
+    def get_ob(self) -> np.ndarray:
         raise NotImplementedError("Observation is not defined in the Env.")
 
     def resolve(self, ss, index):
@@ -65,8 +73,12 @@ class BaseEnv(gym.Env):
     def derivs(self, xs, t, us):
         """
         Returns:
-            *ds*: ndarray
-                An array with the same shape as *state*
+            *xs*: ndarray
+                An array of aggregated states.
+            *t*: float
+                The time when the derivatives calculated.
+            *us*: ndarray
+                An array of aggregated control inputs.
         """
         states = self.resolve(xs, self.state_index)
         controls = self.resolve(us, self.control_index)
@@ -87,7 +99,7 @@ class BaseSystem:
         if callable(deriv):
             self.deriv = deriv
 
-    def deriv(self):
+    def deriv(self, state, t, control, external):
         raise NotImplementedError("deriv method is not defined in the system.")
 
     def reset(self):
