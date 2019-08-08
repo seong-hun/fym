@@ -1,6 +1,6 @@
 '''
-refrence: K. M. Goher, M. O. Tokhi and N. H. Siddique, "Dynamic Modeling
-and Control of a Two Wheeled Robotic Vehicle with a Virtual Payload," 2011
+refrence: M. Deng, A.Inoue, K. Sekiguchi, L. Jian, 
+"Two-wheeled mobile robot motion control in dynamic environments," 2009
 '''
 import gym
 from gym import spaces
