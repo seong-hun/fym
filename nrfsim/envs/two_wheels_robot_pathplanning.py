@@ -8,9 +8,8 @@ from nrfsim.core import BaseEnv
 class TwoWheelsRobotPathPlanningEnv(BaseEnv):
     def __init__(self, initial_state, dt=0.01):
         
-        TwoWheelsRobot = TwoWheelsRobot3Dof(initial_state=initial_state)
-        #import ipdb; ipdb.set_trace()
-        super().__init__(systems=[TwoWheelsRobot], dt=dt)
+        two_wheels_robot = TwoWheelsRobot3Dof(initial_state=initial_state)
+        super().__init__(systems=[two_wheels_robot], dt=dt)
 
         low = np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf])
         high = -low
@@ -25,15 +24,13 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
 
     def reset(self, noise=0):
         super().reset()
-        #self.states['aircraft'] += np.random.uniform(-noise, noise)
         return self.get_ob()
 
     def step(self, action):
         lb, ub = self.action_space.low, self.action_space.high
-        TwoWheelsRobot_control = np.asarray(action)
-        controls = dict(TwoWheelsRobot=TwoWheelsRobot_control)
+        control = np.asarray(action)
+        controls = dict(TwoWheelsRobot=control)
         states = self.states.copy()
-        #import ipdb; ipdb.set_trace()
         next_obs, reward, done, _ = super().step(controls)
         info = {'states': states, 'next_states': self.states}
         return next_obs, reward, done, info
@@ -46,18 +43,12 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
         state = self.states['TwoWheelsRobot']
         system = self.systems['TwoWheelsRobot']
         lb, ub = system.state_lower_bound, system.state_upper_bound
-        #import ipdb; ipdb.set_trace()
         if not np.all([state > lb, state < ub]):
             return True
         else:
             return False
 
     def get_reward(self, states, controls):
-        '''
-        state = states['electricWheelchair']
-        goal_state = [-5, 10, 0, 0]
-        error = self.weight_norm(state - goal_state, [0.02, 0.01, 1, 1])
-        '''
         error = 1
         return -error
 

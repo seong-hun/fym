@@ -7,6 +7,7 @@ from gym import spaces
 import numpy as np
 from nrfsim.core import BaseSystem
 
+
 class TwoWheelsRobot3Dof(BaseSystem):
     L = 0.5
     r = 0.3
@@ -22,11 +23,9 @@ class TwoWheelsRobot3Dof(BaseSystem):
     def __init__(self, initial_state):
         super().__init__(self.name, initial_state, self.control_size)
         
-
     def external(self, states, controls):
         pass
         
-
     def deriv(self, state, t, control, external):
         x, y, vx, vy, theta = state
         Cbi = np.array([[np.cos(theta), np.sin(theta), 0],
