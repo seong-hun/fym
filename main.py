@@ -23,3 +23,6 @@ for i in time_series:
         break
 
     obs = next_obs
+
+# data = []
+# plot(data, type=(Distance, Distance, Angle, Angle))
