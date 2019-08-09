@@ -6,11 +6,11 @@ from nrfsim.core import BaseEnv
 
 
 class TwoWheelsRobotPathPlanningEnv(BaseEnv):
-    def __init__(self, initial_state, dt=0.01):
-        
+    def __init__(self, initial_state, dt=0.01):      
         two_wheels_robot = TwoWheelsRobot3Dof(initial_state=initial_state)
-        super().__init__(systems=[two_wheels_robot], dt=dt)
 
+        super().__init__(systems=[two_wheels_robot], dt=dt)
+        
         low = np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf])
         high = -low
         self.observation_space = gym.spaces.Box(
