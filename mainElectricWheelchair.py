@@ -6,7 +6,11 @@ from nrfsim.envs.electricWheelchair_pathplanning import ElectricWheelchairEnv
 
 np.random.seed(1)
 time_step = 0.01
-env = ElectricWheelchairEnv(initial_state=np.zeros((14,)).astype('float'), mload=40, rGBb=np.array([0, 0, 0]))
+env = ElectricWheelchairEnv(
+    initial_state=np.zeros((14,)).astype('float'),
+    mload=40,
+    rGBb=np.array([0, 0, 0])
+)
 
 
 time_series = np.arange(0, 2, time_step)
