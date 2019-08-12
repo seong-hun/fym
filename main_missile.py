@@ -51,18 +51,3 @@ labels = ('obs', 'traj')
 a = PltModule(time_series, data, variables, quantities)
 a.plot_time(labels)
 a.plot_traj(labels)
-
-# plot figures (2)
-data = {'obs': obs_series}
-variables = {'obs': ('x', 'y', 'V', 'gamma')}
-quantities = {'obs': ('distance', 'distance', 'speed', 'angle')}
-labels = ('obs',)
-a = PltModule(time_series, data, variables, quantities)
-a.plot_time(labels)
-
-data = {'traj': obs_series[:, 0:2]}
-variables = {'traj': ('x', 'y')}
-quantities = {'traj': ('distance', 'distance')}
-labels = ('traj',)
-b = PltModule(time_series, data, variables, quantities)
-b.plot_traj(labels)
