@@ -27,7 +27,8 @@ for i in time_series:
     obs = next_obs
     obs_series = np.vstack((obs_series, obs))
 
-# import ipdb; ipdb.set_trace()
+time_series = time_series[:obs_series.shape[0]]
+
 data = {'traj': obs_series[:, 0:3]}
 variables = {'traj': ('x', 'y', 'z')}
 quantities = {'traj': ('distance', 'distance', 'distance')}

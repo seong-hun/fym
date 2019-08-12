@@ -43,6 +43,7 @@ class PltModule:
                 plt.plot(x, y)
                 plt.xlabel(self.variables['traj'][0] + ' [' + self.units[self.quantities['traj'][0]] + ' ]')
                 plt.ylabel(self.variables['traj'][1] + ' [' + self.units[self.quantities['traj'][1]] + ' ]')
+                plt.show()
             elif len(self.variables['traj']) == 3:
                 x = self.data['traj'][:, 0]
                 y = self.data['traj'][:, 1]
@@ -50,7 +51,7 @@ class PltModule:
                 fig = plt.figure()
                 ax = plt.axes(projection='3d')
                 ax.plot3D(x, y, z)
-
                 ax.set_xlabel(self.variables['traj'][0] + ' [' + self.units[self.quantities['traj'][0]] + ' ]')
                 ax.set_ylabel(self.variables['traj'][1] + ' [' + self.units[self.quantities['traj'][1]] + ' ]')
                 ax.set_zlabel(self.variables['traj'][2] + ' [' + self.units[self.quantities['traj'][2]] + ' ]')
+                plt.show()
