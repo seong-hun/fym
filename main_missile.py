@@ -42,7 +42,6 @@ elapsed_time = time.time() - start_time
 print('simulation time = ', tf - t0, '[s]')
 print('elpased time = ', elapsed_time, '[s]')
 
-
 # plot figures (1)
 data = {'obs': obs_series, 'traj': obs_series[:, 0:2]}
 variables = {'obs': ('x', 'y', 'V', 'gamma'), 'traj': ('x', 'y')}
