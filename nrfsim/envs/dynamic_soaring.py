@@ -67,7 +67,7 @@ class DynamicSoaringEnv(BaseEnv):
 
     def get_ob(self):
         states = self.states['aircraft']
-        return states[2:]
+        return states[0:]
 
     def terminal(self):
         state = self.states['aircraft']

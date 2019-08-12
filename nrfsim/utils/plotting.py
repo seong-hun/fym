@@ -34,21 +34,23 @@ class PltModule:
 
     def plot_traj(self, labels: tuple) -> None:
         if 'traj' in labels:
-            plt.figure()
-            x = self.data['traj'][:, 0]
-            y = self.data['traj'][:, 1]
             if len(self.variables['traj']) > 3:
                 print('Trajectory cannot be displayed in more than 3-dimensions.')
             elif len(self.variables['traj']) == 2:
+                plt.figure()
+                x = self.data['traj'][:, 0]
+                y = self.data['traj'][:, 1]
                 plt.plot(x, y)
                 plt.xlabel(self.variables['traj'][0] + ' [' + self.units[self.quantities['traj'][0]] + ' ]')
                 plt.ylabel(self.variables['traj'][1] + ' [' + self.units[self.quantities['traj'][1]] + ' ]')
             elif len(self.variables['traj']) == 3:
+                x = self.data['traj'][:, 0]
+                y = self.data['traj'][:, 1]
                 z = self.data['traj'][:, 2]
+                fig = plt.figure()
                 ax = plt.axes(projection='3d')
-                plt.plot3D(x, y, z)
-                plt.xlabel(self.variables['traj'][0] + ' [' + self.units[self.quantities['traj'][0]] + ' ]')
-                plt.ylabel(self.variables['traj'][1] + ' [' + self.units[self.quantities['traj'][1]] + ' ]')
+                ax.plot3D(x, y, z)
 
-                plt.zlabel(self.variables['traj'][2] + ' [' + self.units[self.quantities['traj'][2]] + ' ]')
-            plt.show()
+                ax.set_xlabel(self.variables['traj'][0] + ' [' + self.units[self.quantities['traj'][0]] + ' ]')
+                ax.set_ylabel(self.variables['traj'][1] + ' [' + self.units[self.quantities['traj'][1]] + ' ]')
+                ax.set_zlabel(self.variables['traj'][2] + ' [' + self.units[self.quantities['traj'][2]] + ' ]')
