@@ -6,8 +6,9 @@ from nrfsim.models.missile import MissilePlanar
 from nrfsim.core import BaseEnv
 
 
-class StationaryTargetInterceptionEnv(BaseEnv):
+class StationaryTargetEnv(BaseEnv):
     g = 9.80665
+
     def __init__(self, initial_state, dt=0.01):
         missile = MissilePlanar(initial_state=initial_state)
 
@@ -58,7 +59,7 @@ class StationaryTargetInterceptionEnv(BaseEnv):
 
     def get_reward(self, controls):
         state = self.states['missile'][:2]
-        goal_state = [0, 0] # target position
+        goal_state = [0, 0]      # target position
         error = self.weight_norm(state - goal_state, [1, 1])
         return -error
 
@@ -71,4 +72,4 @@ class StationaryTargetInterceptionEnv(BaseEnv):
 
 
 if __name__ == '__main__':
-    env = StationaryTargetInterceptionEnv()
+    env = StationaryTargetEnv()

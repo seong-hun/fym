@@ -6,7 +6,8 @@ from nrfsim.utils.plotting import PltModule
 
 np.random.seed(1)
 
-env = DynamicSoaringEnv(initial_state=np.array([0, 0, -5, 13, 0, 0]).astype('float'))
+env = DynamicSoaringEnv(
+    initial_state=np.array([0, 0, -5, 13, 0, 0]).astype('float'))
 
 time_step = 0.01
 time_series = np.arange(0, 2, time_step)

@@ -2,13 +2,13 @@ import numpy as np
 import numpy.linalg as nla
 import time
 
-from nrfsim.envs.stationary_target_interception import StationaryTargetInterceptionEnv
+from nrfsim.envs.stationary_target_interception import StationaryTargetEnv
 from nrfsim.utils.plotting import PltModule
 
 
 np.random.seed(1)
 
-env = StationaryTargetInterceptionEnv(
+env = StationaryTargetEnv(
     initial_state=np.array([-10e3, 0, 200, np.deg2rad(30)]).astype('float')
 )
 
