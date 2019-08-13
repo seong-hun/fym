@@ -6,11 +6,11 @@ from nrfsim.core import BaseEnv
 
 
 class TwoWheelsRobotPathPlanningEnv(BaseEnv):
-    def __init__(self, initial_state, dt=0.01):      
+    def __init__(self, initial_state, dt=0.01):
         two_wheels_robot = TwoWheelsRobot3Dof(initial_state=initial_state)
 
         super().__init__(systems=[two_wheels_robot], dt=dt)
-        
+
         low = np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf])
         high = -low
         self.observation_space = gym.spaces.Box(
@@ -56,7 +56,8 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
         if np.asarray(W).ndim == 1:
             W = np.diag(W)
         elif np.asarray(W).ndim > 2:
-            raise ValueError("W must have the dimension less than or equal to 2")
+            raise ValueError("W must have the dimension less "
+                             "than or equal to 2")
         return np.sqrt(np.dot(np.dot(v, W), v))
 
 

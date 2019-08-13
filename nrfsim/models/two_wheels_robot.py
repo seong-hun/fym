@@ -46,4 +46,3 @@ class TwoWheelsRobot3Dof(BaseSystem):
         dthetadt = Mb[2]/self.Jb
        
         return np.array([dxdt, dydt, dvxdt, dvydt, dthetadt])
-
