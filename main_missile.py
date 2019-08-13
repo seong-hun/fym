@@ -45,7 +45,8 @@ print('elpased time = ', elapsed_time, '[s]')
 # plot figures (1)
 data = {'obs': obs_series, 'traj': obs_series[:, 0:2]}
 variables = {'obs': ('x', 'y', 'V', 'gamma'), 'traj': ('x', 'y')}
-quantities = {'obs': ('distance', 'distance', 'speed', 'angle'), 'traj': ('distance', 'distance')}
+quantities = {'obs': ('distance', 'distance', 'speed', 'angle'),
+              'traj': ('distance', 'distance')}
 labels = ('obs', 'traj')
 a = PltModule(time_series, data, variables, quantities)
 a.plot_time(labels)
