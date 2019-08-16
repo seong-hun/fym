@@ -28,7 +28,8 @@ class Quadrotor(BaseSystem):
     control_size = 4  # f1, f2, f3, f4
     name = 'quadrotor'
 
-    def __init__(self, initial_state):
+
+    def __init__(self, initial_state: list):
         super().__init__(self.name, initial_state, self.control_size)
         self.state_index = np.cumsum([3, 3, 9, 3])
 
@@ -60,7 +61,8 @@ class Quadrotor(BaseSystem):
         return np.hstack((dx, dv, dR.ravel(), dOmega))
 
 
-def hat(v):
+
+def hat(v: list) -> np.ndarray:
     v1, v2, v3 = v
     return np.array([
         [0, -v3, v2],
