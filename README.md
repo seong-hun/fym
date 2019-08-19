@@ -1,4 +1,3 @@
-## Dependencies
+# Aerodynamic Simulator for Testing Deep RL Algorithms
 
-- Pytorch
-- [pytorch-rl](https://github.com/navneet-nmk/pytorch-rl)
+[nrf-main](https://github.com/seong-hun/nrf-main)
