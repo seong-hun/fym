@@ -24,7 +24,7 @@ class TwoWheelsRobot3Dof(BaseSystem):
         super().__init__(self.name, initial_state, self.control_size)
         
     def external(self, states, controls):
-        pass
+        return 0
         
     def deriv(self, state, t, control, external):
         x, y, vx, vy, theta = state
@@ -46,4 +46,3 @@ class TwoWheelsRobot3Dof(BaseSystem):
         dthetadt = Mb[2]/self.Jb
        
         return np.array([dxdt, dydt, dvxdt, dvydt, dthetadt])
-

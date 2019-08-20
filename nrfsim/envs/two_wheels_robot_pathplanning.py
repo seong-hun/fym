@@ -6,21 +6,20 @@ from nrfsim.core import BaseEnv
 
 
 class TwoWheelsRobotPathPlanningEnv(BaseEnv):
-    def __init__(self, initial_state, dt=0.01):      
+    def __init__(self, initial_state, dt=0.01):
         two_wheels_robot = TwoWheelsRobot3Dof(initial_state=initial_state)
 
-        super().__init__(systems=[two_wheels_robot], dt=dt)
-        
-        low = np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf])
-        high = -low
-        self.observation_space = gym.spaces.Box(
-            low=low, high=high, dtype=np.float32
+        obs_sp = gym.spaces.Box(
+            low=np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf]),
+            high=np.array([np.inf, np.inf, np.inf, np.inf, np.inf]),
+            dtype=np.float32,
         )
-        self.action_space = gym.spaces.Box(
+        act_sp = gym.spaces.Box(
             low=np.array([-1.87, -1.87]),
             high=np.array([1.87, 1.87]),
             dtype=np.float32,
         )
+        super().__init__(systems=[two_wheels_robot], dt=dt, obs_sp=obs_sp, act_sp=act_sp)
 
     def reset(self, noise=0):
         super().reset()
@@ -29,7 +28,7 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
     def step(self, action):
         lb, ub = self.action_space.low, self.action_space.high
         control = np.asarray(action)
-        controls = dict(TwoWheelsRobot=control)
+        controls = dict(two_wheels_robot=control)
         states = self.states.copy()
         next_obs, reward, done, _ = super().step(controls)
         info = {'states': states, 'next_states': self.states}
@@ -48,7 +47,7 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
         else:
             return False
 
-    def get_reward(self, states, controls):
+    def get_reward(self, controls):
         error = 1
         return -error
 
@@ -56,7 +55,8 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
         if np.asarray(W).ndim == 1:
             W = np.diag(W)
         elif np.asarray(W).ndim > 2:
-            raise ValueError("W must have the dimension less than or equal to 2")
+            raise ValueError("W must have the dimension less "
+                             "than or equal to 2")
         return np.sqrt(np.dot(np.dot(v, W), v))
 
 
