@@ -19,7 +19,7 @@ def jacob_analytic(functions, i):
         -``u``: control input (`float` or `int`). arbitraty argumnets
         -``e``: external input (`float` or `int`). arbitraty argumnets
     i : int or float
-        i means what will we get Jacobian function for.
+        ``i`` means what will we get Jacobian function for.
         0: first arguments of ``functions``(usually x)
         1: second argument of ``functions``(usually u)
 
