@@ -1,16 +1,33 @@
 import numdifftools as nd
 import numpy as np
 
-'''
--argument(input)
-function: A function of wanting to get Jacobian function. This function has to have output as np.array
-i: What will we get Jacobian function for? 0: first input of function(usually x), 1: second input of function(usually u)
--return(output)
-Jacobian function
-'''
-
 
 def jacob_analytic(functions, i):
+    """
+    jacob_analytic is used for obtaining analytic jacobian function
+
+    Parameters
+    ----------
+    funcions : callable
+        ``functions`` is what we want to get jacobian function.
+        ``functions`` function that takes at least one positional arguments and
+        at most three arguments including positional, arbitrary, keyword args.
+        The order of arguments should be
+        'state', *'control input', *'external input'.
+
+        -``x``: state (`float` or `int`). It must be taken
+        -``u``: control input (`float` or `int`). arbitraty argumnets
+        -``e``: external input (`float` or `int`). arbitraty argumnets
+    i : int or float
+        i means what will we get Jacobian function for.
+        0: first arguments of ``functions``(usually x)
+        1: second argument of ``functions``(usually u)
+
+    Return
+    ------
+    jacob_fnc : callable
+        jacobian function of ``functions``
+    """
     if i == 0:
         jacob_fnc = nd.Jacobian(functions)
     else:
@@ -23,30 +40,50 @@ def jacob_analytic(functions, i):
     return jacob_fnc
 
 
-'''
--argument(input)
-function: A function of wanting to get Jacobian function. This function has to have output as np.array
-i: What will we get Jacobian function for? 0: first input of function(usually x), 1: second input of function(usually u)
-x: state
-*args: control input or external input of function. If the function has both, control input must come before external
--return(output)
-Jacobian maxtrix
-'''
+def jacob_numerical(functions, i, x, *args):
+    """
+    jacob_numerical is used for obtaining jacobian matrix numerically
 
+    Parameters
+    ----------
+    funcions : callable
+        ``functions`` is what we want to get jacobian function.
+        ``functions`` function that takes at least one positional arguments and
+        at most three arguments including positional, arbitrary, keyword args.
+        The order of arguments should be
+        'state', *'control input', *'external input'.
 
-def jacob_numerical(fnc, i, x, *args):
+        -``x``: state (`float` or `int`). It must be taken
+        -``u``: control input (`float` or `int`). arbitraty argumnets
+        -``e``: external input (`float` or `int`). arbitraty argumnets
+    i : int or float
+        ``i`` means what will we get Jacobian function for.
+        0: first arguments of ``functions``(usually ``x``)
+        1: second argument of ``functions``(usually ``u``)
+    x : int or float
+        ``x`` is state where we want to get jacobian matrix of ``functions``.
+    *args : int or float
+        ``*args`` can be 'control input' or 'external input' or both of them.
+        If both 'control input' and 'external input' are included,
+        'control input' must come befor 'exernal input'.
+
+    Return
+    ------
+    dfdx or dfdu: numpy.ndarray
+        jacobian matrix of ``functions`` for ``x``, ``u`` respectively.
+    """
     ptrb = 1e-9
     if len(args) == 2:
         u = args[0]
         e = args[1]
-        dx = fnc(x, u, e)
+        dx = functions(x, u, e)
         if i == 0:
             n = np.size(x)
             dfdx = np.zeros([n, n])
             for j in np.arange(n):
                 ptrbvec = np.zeros(n)
                 ptrbvec[j] = ptrb
-                dx_ptrb = fnc(x + ptrbvec, u, e)
+                dx_ptrb = functions(x + ptrbvec, u, e)
                 dfdx[j] = (dx_ptrb - dx) / ptrb
             return np.transpose(dfdx)
         else:
@@ -55,19 +92,19 @@ def jacob_numerical(fnc, i, x, *args):
             for j in np.arange(m):
                 ptrbvec = np.zeros(m)
                 ptrbvec[j] = ptrb
-                dx_ptrb = fnc(x, u + ptrbvec, e)
+                dx_ptrb = functions(x, u + ptrbvec, e)
                 dfdu[j] = (dx_ptrb - dx) / ptrb
             return np.transpose(dfdu)
     elif len(args) == 1:
         u = args[0]
-        dx = fnc(x, u)
+        dx = functions(x, u)
         if i == 0:
             n = np.size(x)
             dfdx = np.zeros([n, n])
             for j in np.arange(n):
                 ptrbvec = np.zeros(n)
                 ptrbvec[j] = ptrb
-                dx_ptrb = fnc(x + ptrbvec, u)
+                dx_ptrb = functions(x + ptrbvec, u)
                 dfdx[j] = (dx_ptrb - dx) / ptrb
             return np.transpose(dfdx)
         else:
@@ -76,16 +113,16 @@ def jacob_numerical(fnc, i, x, *args):
             for j in np.arange(m):
                 ptrbvec = np.zeros(m)
                 ptrbvec[j] = ptrb
-                dx_ptrb = fnc(x, u + ptrbvec)
+                dx_ptrb = functions(x, u + ptrbvec)
                 dfdu[j] = (dx_ptrb - dx) / ptrb
             return np.transpose(dfdu)
     else:
-        dx = fnc(x)
+        dx = functions(x)
         n = np.size(x)
         dfdx = np.zeros([n, n])
         for j in np.arange(n):
             ptrbvec = np.zeros(n)
             ptrbvec[j] = ptrb
-            dx_ptrb = fnc(x + ptrbvec)
+            dx_ptrb = functions(x + ptrbvec)
             dfdx[j] = (dx_ptrb - dx) / ptrb
         return np.transpose(dfdx)

@@ -1,11 +1,11 @@
-'''
-function f: function f has stats, control input, external input as positional argument
+"""
+This is test code for linearization module.
+function f: function f has stats, control input, external input as positional
+argument
 function h: function h has stats, control inputas positional argument
 function g: function g has stats as positional argument
 function ext: function ext has stats, external input as positional argument
-'''
-
-
+"""
 from nrfsim.utils.linearization import jacob_analytic
 from nrfsim.utils.linearization import jacob_numerical
 import numpy as np
