@@ -37,7 +37,7 @@ class Quadrotor(BaseSystem):
         *ss, _ = np.split(ss, index)
         return ss
 
-    def deriv(self, state, t, control, external):
+    def deriv(self, state, control, external, t):
         d, c = self.d, self.c
         f, M1, M2, M3 = np.array(
             [[1, 1, 1, 1],

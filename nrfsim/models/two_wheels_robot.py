@@ -26,7 +26,7 @@ class TwoWheelsRobot3Dof(BaseSystem):
     def external(self, states, controls):
         return 0
         
-    def deriv(self, state, t, control, external):
+    def deriv(self, state, control, external, t):
         x, y, vx, vy, theta = state
         Cbi = np.array([[np.cos(theta), np.sin(theta), 0],
                         [-np.sin(theta), np.cos(theta), 0],

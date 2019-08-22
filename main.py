@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.linalg as nla
-
+import matplotlib.pyplot as plt
 from nrfsim.envs.dynamic_soaring import DynamicSoaringEnv
 from nrfsim.utils.plotting import PltModule
 
@@ -37,3 +37,4 @@ labels = ('traj',)
 a = PltModule(time_series, data, variables, quantities)
 a.plot_time(labels)
 a.plot_traj(labels)
+plt.show()

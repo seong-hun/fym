@@ -13,6 +13,32 @@ import numpy as np
 x = np.array([2, 2])
 u = np.array([1, 1])
 e = 3
+t = 1
+
+
+def ft(state, input, external, time):
+    x1 = state[0]
+    x2 = state[1]
+    u1 = input[0]
+    u2 = input[1]
+    f1 = (x1 ** 2) * u1 + (x2 ** 3) * u2 * external
+    f2 = x1 + external * u2 - x2 ** 2*time
+    return np.array([f1, f2])
+
+
+dftdx = jacob_analytic(ft, 0)
+A_ft = dftdx(x, u, e, t)
+print('A_f =', A_ft)
+
+A_ft_n = jacob_numerical(ft, 0, x, u, e, t)
+print('A_f_num =', A_ft_n)
+
+dfdu = jacob_analytic(ft, 1)
+B_ft = dfdu(x, u, e, t)
+print('B_f =', B_ft)
+
+B_ft_n = jacob_numerical(ft, 1, x, u, e, t)
+print('B_f_num =', B_ft_n)
 
 
 def f(state, input, external):

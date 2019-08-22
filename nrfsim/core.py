@@ -85,7 +85,7 @@ class BaseEnv(gym.Env):
 
         derivs = []
         for s, x, u in zip(*map(dict.values, [self.systems, states, controls])):
-            derivs.append(s.deriv(x, t, u, s.external(states, controls)))
+            derivs.append(s.deriv(x, u, s.external(states, controls), t))
 
         return np.hstack(derivs)
 
@@ -99,7 +99,7 @@ class BaseSystem:
         if callable(deriv):
             self.deriv = deriv
 
-    def deriv(self, state, t, control, external):
+    def deriv(self, state, control, external, t):
         raise NotImplementedError("deriv method is not defined in the system.")
 
     def reset(self):

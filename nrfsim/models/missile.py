@@ -26,7 +26,7 @@ class MissilePlanar(BaseSystem):
         return 0
         # return {"wind" : [(0, 0), (0, 0)]} # no external effects
 
-    def deriv(self, state, t, control, external):
+    def deriv(self, state, control, external, t):
         # state and (control) input
         x, y, V, gamma, = state
         a = control

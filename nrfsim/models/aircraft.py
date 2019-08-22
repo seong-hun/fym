@@ -28,13 +28,13 @@ class Aircraft3Dof(BaseSystem):
         state = states['aircraft']
         return dict(wind=self.wind.get(state))
 
-    def deriv(self, state, t, control, external):
+    def deriv(self, state, control, external, t):
         CL, phi = control
         CD = self.CD0 + self.CD1*CL**2
         raw_control = CD, CL, phi
-        return self._raw_deriv(state, t, raw_control, external)
+        return self._raw_deriv(state, raw_control, external, t)
 
-    def _raw_deriv(self, state, t, control, external):
+    def _raw_deriv(self, state, control, external, t):
         x, y, z, V, gamma, psi = state
         CD, CL, phi = control
         (_, Wy, _), (_, dWydt, _) = external['wind']

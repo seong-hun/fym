@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.linalg as nla
 import time
-
+import matplotlib.pyplot as plt
 from nrfsim.envs.stationary_target_interception import StationaryTargetEnv
 from nrfsim.utils.plotting import PltModule
 
@@ -51,3 +51,4 @@ labels = ('obs', 'traj')
 a = PltModule(time_series, data, variables, quantities)
 a.plot_time(labels)
 a.plot_traj(labels)
+plt.show()

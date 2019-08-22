@@ -1,5 +1,6 @@
 import numdifftools as nd
 import numpy as np
+#from inspect import signature
 
 
 def jacob_analytic(functions, i):
@@ -13,11 +14,12 @@ def jacob_analytic(functions, i):
         ``functions`` function that takes at least one positional arguments and
         at most three arguments including positional, arbitrary, keyword args.
         The order of arguments should be
-        'state', *'control input', *'external input'.
+        'state', *'control input', *'the other inputs', *'time'.
 
         -``x``: state (`float` or `int`). It must be taken
         -``u``: control input (`float` or `int`). arbitraty argumnets
-        -``e``: external input (`float` or `int`). arbitraty argumnets
+        -``e``: external input (`float` or `int`). arbitrary argumnets
+        -``t``: time (`float`). arbitrary arguments
     i : int or float
         ``i`` means what will we get Jacobian function for.
         0: first arguments of ``functions``(usually x)
@@ -51,11 +53,12 @@ def jacob_numerical(functions, i, x, *args):
         ``functions`` function that takes at least one positional arguments and
         at most three arguments including positional, arbitrary, keyword args.
         The order of arguments should be
-        'state', *'control input', *'external input'.
+        'state', *'control input', *'external input', *'time'.
 
         -``x``: state (`float` or `int`). It must be taken
-        -``u``: control input (`float` or `int`). arbitraty argumnets
-        -``e``: external input (`float` or `int`). arbitraty argumnets
+        -``u``: control input (`float` or `int`). arbitrary argumnets
+        -``e``: external input (`float` or `int`). arbitrary argumnets
+        -``t``: time. arbitrary arguments
     i : int or float
         ``i`` means what will we get Jacobian function for.
         0: first arguments of ``functions``(usually ``x``)
@@ -73,7 +76,30 @@ def jacob_numerical(functions, i, x, *args):
         jacobian matrix of ``functions`` for ``x``, ``u`` respectively.
     """
     ptrb = 1e-9
-    if len(args) == 2:
+    if len(args) == 3:
+        u = args[0]
+        e = args[1]
+        t = args[2]
+        dx = functions(x, u, e, t)
+        if i == 0:
+            n = np.size(x)
+            dfdx = np.zeros([n, n])
+            for j in np.arange(n):
+                ptrbvec = np.zeros(n)
+                ptrbvec[j] = ptrb
+                dx_ptrb = functions(x + ptrbvec, u, e, t)
+                dfdx[j] = (dx_ptrb - dx) / ptrb
+            return np.transpose(dfdx)
+        else:
+            m = np.size(u)
+            dfdu = np.zeros([m, m])
+            for j in np.arange(m):
+                ptrbvec = np.zeros(m)
+                ptrbvec[j] = ptrb
+                dx_ptrb = functions(x, u + ptrbvec, e, t)
+                dfdu[j] = (dx_ptrb - dx) / ptrb
+            return np.transpose(dfdu)
+    elif len(args) == 2:
         u = args[0]
         e = args[1]
         dx = functions(x, u, e)
