@@ -11,7 +11,8 @@ from mpl_toolkits import mplot3d
 
 
 class PltModule:
-    units = {'time': 's', 'distance': 'm', 'speed': 'm/s', 'angle': 'deg'}
+    units = {'time': 's', 'distance': 'm', 'speed': 'm/s', 'angle': 'deg',
+             'force': 'N'}
 
     def __init__(self, time_series: float, data: dict, variables: dict,
                  quantities: dict) -> None:
@@ -28,12 +29,15 @@ class PltModule:
                 if self.quantities[label][i] == 'angle':
                     plt.plot(self.time_series,
                              np.rad2deg(self.data[label][:, i]))
+                    plt.xlabel('t' + ' [' + self.units['time'] + ' ]')
+                    plt.ylabel(self.variables[label][i] + ' ['
+                               + self.units[self.quantities[label][i]] + ' ]')
+
                 else:
                     plt.plot(self.time_series, self.data[label][:, i])
                     plt.xlabel('t' + ' [' + self.units['time'] + ' ]')
                     plt.ylabel(self.variables[label][i] + ' ['
                                + self.units[self.quantities[label][i]] + ' ]')
-            plt.show()
 
     def plot_traj(self, labels: tuple) -> None:
         if 'traj' in labels:
@@ -49,7 +53,6 @@ class PltModule:
                            + self.units[self.quantities['traj'][0]] + ' ]')
                 plt.ylabel(self.variables['traj'][1] + ' ['
                            + self.units[self.quantities['traj'][1]] + ' ]')
-                plt.show()
             elif len(self.variables['traj']) == 3:
                 x = self.data['traj'][:, 0]
                 y = self.data['traj'][:, 1]
@@ -63,4 +66,3 @@ class PltModule:
                               + self.units[self.quantities['traj'][1]] + ' ]')
                 ax.set_zlabel(self.variables['traj'][2] + ' ['
                               + self.units[self.quantities['traj'][2]] + ' ]')
-                plt.show()
