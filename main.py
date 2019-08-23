@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.linalg as nla
 
-from nrfsim.envs.dynamic_soaring import DynamicSoaringEnv
+from fym.envs.dynamic_soaring import DynamicSoaringEnv
 
 
 np.random.seed(1)

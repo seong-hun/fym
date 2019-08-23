@@ -2,7 +2,7 @@ import numpy as np
 import numpy.linalg as nla
 import time
 
-from nrfsim.envs.stationary_target_interception import StationaryTargetInterceptionEnv
+from fym.envs.stationary_target_interception import StationaryTargetInterceptionEnv
 
 
 np.random.seed(1)

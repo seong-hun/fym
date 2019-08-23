@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 
-from nrfsim.core import BaseSystem
+from fym.core import BaseSystem
 
 
 class Aircraft3Dof(BaseSystem):
