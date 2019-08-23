@@ -1,5 +1,5 @@
 import numpy as np
-from nrfsim.agents.LQR.LQR import LQR
+from fym.agents.LQR.LQR import LQR
 
 A = np.array([[1, 2], [2, -1]])
 B = np.array([[1], [2]])

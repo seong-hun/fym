@@ -3,7 +3,7 @@ from gym import spaces
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from nrfsim.core import BaseSystem
+from fym.core import BaseSystem
 
 
 class Quadrotor(BaseSystem):

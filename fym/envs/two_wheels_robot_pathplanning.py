@@ -1,8 +1,8 @@
 import numpy as np
 import gym
 from gym import spaces
-from nrfsim.models.two_wheels_robot import TwoWheelsRobot3Dof
-from nrfsim.core import BaseEnv
+from fym.models.two_wheels_robot import TwoWheelsRobot3Dof
+from fym.core import BaseEnv
 
 
 class TwoWheelsRobotPathPlanningEnv(BaseEnv):

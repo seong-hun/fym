@@ -6,8 +6,8 @@ function h: function h has stats, control inputas positional argument
 function g: function g has stats as positional argument
 function ext: function ext has stats, external input as positional argument
 """
-from nrfsim.utils.linearization import jacob_analytic
-from nrfsim.utils.linearization import jacob_numerical
+from fym.utils.linearization import jacob_analytic
+from fym.utils.linearization import jacob_numerical
 import numpy as np
 
 x = np.array([2, 2])

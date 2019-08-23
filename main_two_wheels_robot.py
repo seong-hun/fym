@@ -1,5 +1,5 @@
 import numpy as np
-from nrfsim.envs.two_wheels_robot_pathplanning import TwoWheelsRobotPathPlanningEnv
+from fym.envs.two_wheels_robot_pathplanning import TwoWheelsRobotPathPlanningEnv
 np.random.seed(1)
 env = TwoWheelsRobotPathPlanningEnv(initial_state=np.array([0, 0, 0, 0, 0]).astype('float'))
 time_step = 0.01

@@ -36,5 +36,5 @@ class LQR:
         X = lin.solve_discrete_are(A, B, Q, R)
         K = lin.inv(R)*(np.transpose(B).dot(X))
         eigVals, eivVecs = lin.eig(A-B.dot(K))
-        return K, X, eigVals, eigVecs        
+        return K, X, eigVals, eigVecs
 '''
