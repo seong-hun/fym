@@ -27,11 +27,18 @@ class Quadrotor(BaseSystem):
     g = 9.81  # m/s^2
     control_size = 4  # f1, f2, f3, f4
     name = 'quadrotor'
-
+    state_lower_bound = np.array(-np.inf * np.ones(18))
+    state_upper_bound = np.array(np.inf * np.ones(18))
+    control_lower_bound = np.array(-np.inf * np.ones(4))
+    control_upper_bound = np.array(-np.inf * np.ones(4))
 
     def __init__(self, initial_state: list):
         super().__init__(self.name, initial_state, self.control_size)
         self.state_index = np.cumsum([3, 3, 9, 3])
+
+    def external(self, states, controls):
+        state = states['quadrotor']
+        return None
 
     def split(self, ss, index):
         *ss, _ = np.split(ss, index)
