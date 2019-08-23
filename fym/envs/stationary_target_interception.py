@@ -2,8 +2,8 @@ import numpy as np
 import gym
 from gym import spaces
 
-from nrfsim.models.missile import MissilePlanar
-from nrfsim.core import BaseEnv
+from fym.models.missile import MissilePlanar
+from fym.core import BaseEnv
 
 
 class StationaryTargetEnv(BaseEnv):

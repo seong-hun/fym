@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.linalg as nla
 
-from nrfsim.envs.dynamic_soaring import DynamicSoaringEnv
-from nrfsim.utils.plotting import PltModule
+from fym.envs.dynamic_soaring import DynamicSoaringEnv
+from fym.utils.plotting import PltModule
 
 np.random.seed(1)
 

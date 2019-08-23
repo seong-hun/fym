@@ -2,8 +2,8 @@ import numpy as np
 import numpy.linalg as nla
 import time
 
-from nrfsim.envs.stationary_target_interception import StationaryTargetEnv
-from nrfsim.utils.plotting import PltModule
+from fym.envs.stationary_target_interception import StationaryTargetEnv
+from fym.utils.plotting import PltModule
 
 
 np.random.seed(1)
