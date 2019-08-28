@@ -12,17 +12,18 @@ class QuadrotorHoveringEnv(BaseEnv):
         quadrotor = Quadrotor(initial_state=initial_state)
 
         obs_sp = gym.spaces.Box(
-            low=-np.pi * np.ones(18),
-            high=np.pi * np.ones(18),
+            low=-np.full(18, np.inf),
+            high=np.full(18, np.inf),
             dtype=np.float32,
         )
         act_sp = gym.spaces.Box(
-            low=-10000 * np.ones(4),
-            high=10000* np.ones(4),
+            low=-np.full(4, np.inf),
+            high=np.full(4, np.inf),
             dtype=np.float32,
         )
 
-        super().__init__(systems=[quadrotor], dt=dt, obs_sp=obs_sp, act_sp=act_sp)
+        super().__init__(systems=[quadrotor], dt=dt,
+                         obs_sp=obs_sp, act_sp=act_sp)
 
     def reset(self, noise=0):
         super().reset()
@@ -76,4 +77,4 @@ class QuadrotorHoveringEnv(BaseEnv):
 
 
 if __name__ == '__main__':
-    env = StationaryTargetEnv()
+    env = QuadrotorHoveringEnv()

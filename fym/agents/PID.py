@@ -66,4 +66,3 @@ if __name__ == '__main__':
     gain = np.array([1, 3, 3])
     print(ctrllr.input(e))
     print(ctrllr.e_intg, ctrllr.e_prev)
-
