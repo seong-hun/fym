@@ -41,12 +41,12 @@ allocation_matrix = nla.inv(
 )
 
 for i in time_series:
-    euler = R.from_dcm(obs[6:15].reshape(3,3)).as_euler('zyx', degrees=False)
-    y = np.concatenate((euler[[2, 1]], -obs[2]), axis=None)
+    euler_angles = obs[3:6]
+    y = np.concatenate((euler_angles[[2, 1]], -obs[2]), axis=None)
     e_y = y - y_goal
-    f24_diff = pid_roll.input(e_y[0])
-    f31_diff = pid_pitch.input(e_y[1])
-    f1234_sum = pid_height.input(-e_y[2]) + quad.m * quad.g
+    f24_diff = pid_roll.get(e_y[0])
+    f31_diff = pid_pitch.get(e_y[1])
+    f1234_sum = pid_height.get(-e_y[2]) + quad.m * quad.g
     controls = allocation_matrix.dot([f24_diff, f31_diff, f1234_sum, 0])
 
     next_obs, reward, done, _ = env.step(controls)

@@ -12,8 +12,8 @@ class QuadrotorHoveringEnv(BaseEnv):
         quadrotor = Quadrotor(initial_state=initial_state)
 
         obs_sp = gym.spaces.Box(
-            low=-np.full(18, np.inf),
-            high=np.full(18, np.inf),
+            low=-np.full(6, np.inf),
+            high=np.full(6, np.inf),
             dtype=np.float32,
         )
         act_sp = gym.spaces.Box(
@@ -46,8 +46,10 @@ class QuadrotorHoveringEnv(BaseEnv):
         return next_obs, reward, done, info
 
     def get_ob(self):
-        states = self.states['quadrotor']
-        return states
+        state = self.states['quadrotor']
+        position = state[:3]
+        euler_angles = R.from_dcm(state[6:15].reshape(3, 3)).as_euler('ZYX')
+        return np.hstack((position, euler_angles))
 
     def terminal(self):
         state = self.states['quadrotor']
@@ -59,12 +61,8 @@ class QuadrotorHoveringEnv(BaseEnv):
             return False
 
     def get_reward(self, controls):
-        euler = R.from_dcm(
-            self.states['quadrotor'][6:15].reshape(3,3)).as_euler(
-                                                        'zyx', degrees=True)
-        # import ipdb; ipdb.set_trace()
-        att = euler[0:2]
-        att_goal = [0, 0]      # goal attitude (roll, pitch)
+        att = self.states['quadrotor'][3:5]  # goal attitude (roll, pitch)
+        att_goal = [0, 0]
         error = self.weight_norm(att - att_goal, [1, 1])
         return -error
 
