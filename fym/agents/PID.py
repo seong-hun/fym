@@ -22,8 +22,7 @@ class PID():
             self.integrate = intg_euler
             self.differentiate = diff_euler
 
-    def input(self, e: float) -> float:
-        
+    def get(self, e: float) -> float:
         dt = self.dt
         e_i = self.e_intg
         e_d = self.differentiate(e, self.e_prev, dt)
@@ -66,4 +65,3 @@ if __name__ == '__main__':
     gain = np.array([1, 3, 3])
     print(ctrllr.input(e))
     print(ctrllr.e_intg, ctrllr.e_prev)
-
