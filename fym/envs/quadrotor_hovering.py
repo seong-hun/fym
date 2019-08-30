@@ -1,13 +1,27 @@
 import numpy as np
+import numpy.linalg as nla
 import gym
 from gym import spaces
 from scipy.spatial.transform import Rotation as R
 
 from fym.models.quadrotor import Quadrotor
 from fym.core import BaseEnv
+from fym.agents.PID import PID
 
 
 class QuadrotorHoveringEnv(BaseEnv):
+    # inner-loop PID control
+    pid_height = PID(5 * np.array([1.0, 0.1, 1.0]), windup=10)
+    pid_pitch = PID(1.0 * np.array([1.0, 0.1, 1.0]), windup=False)
+    pid_roll = PID(1.0 * np.array([1.0, 0.1, 1.0]), windup=False)
+
+    allocation_matrix = nla.inv(
+        [[0, 1, 0, -1],
+         [-1, 0, 1, 0],
+         [1, 1, 1, 1],
+         [1, -1, 1, -1]]
+    )
+
     def __init__(self, initial_state, dt=0.01):
         quadrotor = Quadrotor(initial_state=initial_state)
 
@@ -24,7 +38,7 @@ class QuadrotorHoveringEnv(BaseEnv):
 
         super().__init__(systems=[quadrotor], dt=dt,
                          obs_sp=obs_sp, act_sp=act_sp)
-
+        
     def reset(self, noise=0):
         super().reset()
         self.states['quadrotor'] += np.random.uniform(-noise, noise)
@@ -32,11 +46,18 @@ class QuadrotorHoveringEnv(BaseEnv):
 
     def step(self, action):
         # ----------------------------------------------------------------------
-        # These lines will be replaced with
-        #   controls = dict(aircraft=action)
-        # lb, ub = self.action_space.low, self.action_space.high
-        # quadrotor_control = (lb + ub)/2 + (ub - lb)/2*np.asarray(action)
-        quadrotor_control = np.asarray(action)
+        y_goal = action
+
+        # inner-loop PID control
+        quad = self.systems['quadrotor']
+        y = np.array([-1, 1, 1]) * self.get_ob()[[2, 4, 5]]
+        e_y = y - y_goal
+        f1234_sum = self.pid_height.get(-e_y[0]) + quad.m * quad.g
+        f31_diff = self.pid_pitch.get(e_y[1])
+        f24_diff = self.pid_roll.get(e_y[2])
+    
+        quadrotor_control \
+                = self.allocation_matrix.dot([f24_diff, f31_diff, f1234_sum, 0])
         controls = dict(quadrotor=quadrotor_control)
         # ----------------------------------------------------------------------
 
