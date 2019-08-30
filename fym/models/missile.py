@@ -75,5 +75,4 @@ class MissilePlanar(BaseSystem):
         dVdt = (T - D)/m - self.g*np.sin(gamma)
         dgammadt = (a - self.g*np.cos(gamma))/V
 
-        # import ipdb; ipdb.set_trace()
         return np.hstack([dxdt, dydt, dVdt, dgammadt])

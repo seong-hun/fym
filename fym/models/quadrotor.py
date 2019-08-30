@@ -30,7 +30,7 @@ class Quadrotor(BaseSystem):
     state_lower_bound = np.array(-np.inf * np.ones(18))
     state_upper_bound = np.array(np.inf * np.ones(18))
     control_lower_bound = np.array(-np.inf * np.ones(4))
-    control_upper_bound = np.array(-np.inf * np.ones(4))
+    control_upper_bound = np.array(np.inf * np.ones(4))
 
     def __init__(self, initial_state: list):
         super().__init__(self.name, initial_state, self.control_size)
