@@ -10,8 +10,8 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
         two_wheels_robot = TwoWheelsRobot3Dof(initial_state=initial_state)
 
         obs_sp = gym.spaces.Box(
-            low=np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf]),
-            high=np.array([np.inf, np.inf, np.inf, np.inf, np.inf]),
+            low=np.array([-np.inf, -np.inf, -np.inf, -np.inf]),
+            high=np.array([np.inf, np.inf, np.inf, np.inf]),
             dtype=np.float32,
         )
         act_sp = gym.spaces.Box(
