@@ -5,7 +5,7 @@ import numpy as np
 
 
 class PID():
-    def __init__(self, gain, windup=True, method='euler', dt=0.01):
+    def __init__(self, gain, windup=False, method='euler', dt=0.01):
         self.e_intg = 0
         self.e_prev = 0  # initial guess for differentiator
         self.windup = windup
