@@ -2,11 +2,11 @@ import numpy as np
 import numpy.linalg as nla
 import gym
 from gym import spaces
-from scipy.spatial.transform import Rotation as R
 
 from fym.models.quadrotor import Quadrotor
 from fym.core import BaseEnv
 from fym.agents.PID import PID
+from fym.utils import rotation as rot
 
 
 class QuadrotorHoveringEnv(BaseEnv):
@@ -38,7 +38,7 @@ class QuadrotorHoveringEnv(BaseEnv):
 
         super().__init__(systems=[quadrotor], dt=dt,
                          obs_sp=obs_sp, act_sp=act_sp)
-        
+
     def reset(self, noise=0):
         super().reset()
         self.states['quadrotor'] += np.random.uniform(-noise, noise)
@@ -55,9 +55,9 @@ class QuadrotorHoveringEnv(BaseEnv):
         f1234_sum = self.pid_height.get(-e_y[0]) + quad.m * quad.g
         f31_diff = self.pid_pitch.get(e_y[1])
         f24_diff = self.pid_roll.get(e_y[2])
-    
-        quadrotor_control \
-                = self.allocation_matrix.dot([f24_diff, f31_diff, f1234_sum, 0])
+
+        quadrotor_control = self.allocation_matrix.dot(
+            [f24_diff, f31_diff, f1234_sum, 0])
         controls = dict(quadrotor=quadrotor_control)
         # ----------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ class QuadrotorHoveringEnv(BaseEnv):
     def get_ob(self):
         state = self.states['quadrotor']
         position = state[:3]
-        euler_angles = R.from_dcm(state[6:15].reshape(3, 3)).as_euler('ZYX')
+        euler_angles = rot.dcm_to_angle(state[6:15].reshape(3, 3))
         return np.hstack((position, euler_angles))
 
     def terminal(self):

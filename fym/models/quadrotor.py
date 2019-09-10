@@ -1,9 +1,9 @@
 import gym
 from gym import spaces
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 
 from fym.core import BaseSystem
+import fym.utils.rotation as rot
 
 
 class Quadrotor(BaseSystem):
@@ -68,7 +68,6 @@ class Quadrotor(BaseSystem):
         return np.hstack((dx, dv, dR.ravel(), dOmega))
 
 
-
 def hat(v: list) -> np.ndarray:
     v1, v2, v3 = v
     return np.array([
@@ -81,7 +80,7 @@ def hat(v: list) -> np.ndarray:
 if __name__ == '__main__':
     x0 = [0, 0, 0]
     v0 = [0, 0, 0]
-    R0 = R.from_euler('ZYX', [0, 0, 0]).as_dcm()
+    R0 = rot.anlge_to_dcm([0, 0, 0])
     dOmega = [0, 0, 0]
     initial_state = np.hstack((x0, v0, R0.ravel(), dOmega))
 
