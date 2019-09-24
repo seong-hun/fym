@@ -31,16 +31,11 @@ class BaseEnv(gym.Env):
         us = np.hstack(list(controls.values()))
         t = self.clock
 
-        try:
-            nxs = rk4(
-                self.derivs,
-                xs,
-                t + np.linspace(0, self.dt, self.rk4_steps), us
-            )
-        except ValueError:
-            nxs = [None]
-            reward = -1
-            return None, reward, True, {}
+        nxs = rk4(
+            self.derivs,
+            xs,
+            t + np.linspace(0, self.dt, self.rk4_steps), us
+        )
 
         nxs = nxs[-1]
         next_states = self.resolve(nxs, self.state_index)

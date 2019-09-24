@@ -16,15 +16,13 @@ class Wind:
         _, _, z, V, gamma, _ = state
         h = -z
 
-        # if h < 0:
-        #     raise ValueError(f'Negative height {h}')
         h = max(h, self.h0)
 
         Wy = self.Wref*np.log(h/self.h0)/np.log(self.href/self.h0)
-        dWyds = -self.Wref/h/np.log(self.href/self.h0)
+        dWydz = -self.Wref/h/np.log(self.href/self.h0)
 
         vel = [0, Wy, 0]
-        grad = [0, dWyds, 0]
+        grad = [[0, 0, 0], [0, 0, dWydz], [0, 0, 0]]
         return vel, grad
 
 
@@ -39,8 +37,8 @@ class DynamicSoaringEnv(BaseEnv):
             dtype=np.float32,
         )
         act_sp = gym.spaces.Box(
-            low=np.array([-0.3, np.deg2rad(-60)]),
-            high=np.array([1.5, np.deg2rad(60)]),
+            low=np.array([-np.inf, -np.inf]),
+            high=np.array([-np.inf, -np.inf]),
             dtype=np.float32,
         )
 
@@ -55,7 +53,8 @@ class DynamicSoaringEnv(BaseEnv):
         # ----------------------------------------------------------------------
         # These lines will be replaced with
         #   controls = dict(aircraft=action)
-        lb, ub = self.action_space.low, self.action_space.high
+        lb = np.array(self.systems['aircraft'].control_lower_bound)
+        ub = np.array(self.systems['aircraft'].control_upper_bound)
         aircraft_control = (lb + ub)/2 + (ub - lb)/2*np.asarray(action)
         controls = dict(aircraft=aircraft_control)
         # ----------------------------------------------------------------------
