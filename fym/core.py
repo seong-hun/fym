@@ -1,8 +1,26 @@
 from collections import OrderedDict
+from itertools import chain
 import functools
 import numpy as np
 from scipy.integrate import odeint
 import gym
+
+
+def deep_flatten(arg):
+    if arg == []:
+        return arg
+    if isinstance(arg, (list, tuple)):
+        return deep_flatten(arg[0]) + deep_flatten(arg[1:])
+    elif isinstance(arg, (np.ndarray, float, int)):
+        return [np.asarray(arg).ravel()]
+
+
+def flatten(arglist):
+    return [np.asarray(arg).ravel() for arg in arglist]
+
+
+def infinite_box(shape):
+    return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float32)
 
 
 def infer_obs_space(systems):
@@ -16,7 +34,8 @@ def infer_obs_space(systems):
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems: list, dt: float, infer_obs_space=True):
+    def __init__(self, systems: list, dt: float, infer_obs_space=True,
+                 odeint_option={}):
         self.systems = OrderedDict({s.name: s for s in systems})
 
         if infer_obs_space and not hasattr(self, 'observation_space'):
@@ -24,7 +43,6 @@ class BaseEnv(gym.Env):
 
         # Indices for packing
         self.state_index = [system.state_shape for system in systems]
-        self.control_index = [system.control_shape for system in systems]
 
         # Necessary properties for gym.Env
         if not hasattr(self, 'observation_space'):
@@ -35,37 +53,31 @@ class BaseEnv(gym.Env):
 
         self.clock = Clock(dt=dt)
 
+        self.odeint_option = odeint_option
+
     def reset(self):
         initial_states = {
             k: system.reset() for k, system in self.systems.items()
         }
         self.states = initial_states
         self.clock.reset()
-        return self.get_ob()
+        return self.observation(self.states)
 
-    def step(self, action):
-        xs = np.hstack(list(self.states.values()))
-        t_span = self.clock + np.array([0, self.dt])
+    def get_next_states(self, t, states, action):
+        xs = self.unpack_state(states)
+        t_span = [t, t + self.clock.dt]
 
-        func = self.ode_wrapper(self.derivs, args=(action,))
-        nxs = odeint(func, t_span, xs, tfirst=True, **self.ode_args)
+        func = self.ode_wrapper(self.derivs)
+        nxs = odeint(func, xs, t_span, args=(action,), tfirst=True)
 
         nxs = nxs[-1]
         next_states = self.pack_state(nxs)
 
-        # Reward and terminal
-        reward = self.reward()
-        terminal = self.terminal()
+        return next_states
 
-        # Update internal state and clock
-        self.states = next_states
-        self.clock = t_span[-1]
-
-        return (self.observation(next_states), reward, terminal, {})
-
-    def ode_wrapper(self, func, args):
-        @functools.wraps
-        def wrapper(t, y):
+    def ode_wrapper(self, func):
+        @functools.wraps(func)
+        def wrapper(t, y, *args):
             states = self.pack_state(y)
             return func(t, states, *args)
         return wrapper
@@ -73,33 +85,26 @@ class BaseEnv(gym.Env):
     def derivs(self, t, states, action):
         """
         It is recommened to override this method by a user-defined ``derivs``.
-        """
+
+        Sample:
+        ```python
         controls = self.pack_action(us, self.control_index)
         derivs = [system.deriv(t, states, controls) for system in self.systems]
         return np.hstack(derivs)
+        ```
+        """
+        raise NotImplementedError
 
     def pack_state(self, flat_state):
-        unpacked = OrderedDict(
+        packed = OrderedDict(
             zip(self.systems.keys(), pack(flat_state, self.state_index)))
-        return unpacked
+        return packed
 
-    def pack_action(self, action):
-        unpacked = OrderedDict(
-            zip(self.systems.keys(), pack(action, self.control_index)))
-        return unpacked
+    def unpack_state(self, states):
+        unpacked = flatten(states.values())
+        return np.hstack(unpacked)
 
-    def resolve(self, ss, index):
-        *ss, _ = np.split(ss, index)
-        some = OrderedDict(zip(self.systems.keys(), ss))
-        return some
-
-    def reward(self, controls: dict) -> float:
-        raise NotImplementedError("Reward function is not defined in the Env.")
-
-    def terminal(self) -> bool:
-        raise NotImplementedError("Terminal is not defined in the Env.")
-
-    def observation(self, observation):
+    def step(self, action):
         raise NotImplementedError
 
 
@@ -107,7 +112,7 @@ class BaseSystem:
     def __init__(self, name, initial_state, control_size=0, deriv=None):
         self.name = name
         self.initial_state = initial_state
-        self.state_shape = self.initial_state.shape()
+        self.state_shape = self.initial_state.shape
         self.control_size = control_size
 
         if callable(deriv):
@@ -115,13 +120,13 @@ class BaseSystem:
 
     @property
     def initial_state(self):
-        return _initial_state
+        return self._initial_state
 
     @initial_state.setter
     def initial_state(self, val):
-        self._initial_stat = np.asarray(val)
+        self._initial_state = np.asarray(val)
 
-    def deriv(self, state, t, control, external):
+    def deriv(self):
         raise NotImplementedError("deriv method is not defined in the system.")
 
     def reset(self):
@@ -131,6 +136,7 @@ class BaseSystem:
 class Clock:
     def __init__(self, dt, max_t=None):
         self.dt = dt
+        self.max_t = max_t
 
     def reset(self):
         self.t = 0
