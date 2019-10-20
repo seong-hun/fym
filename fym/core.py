@@ -6,6 +6,8 @@ import numpy as np
 from scipy.integrate import odeint
 import gym
 
+from fym.utils import logger
+
 
 def deep_flatten(arg):
     if arg == []:
@@ -54,6 +56,8 @@ class BaseEnv(gym.Env):
 
         self.clock = Clock(dt=dt)
 
+        self.logger = logger.Logger(flename='state_history.h5')
+
         self.odeint_option = odeint_option
 
         if not isinstance(ode_step_len, int):
@@ -79,8 +83,9 @@ class BaseEnv(gym.Env):
         packed_hist = [self.pack_state(_) for _ in ode_hist]
         next_states = packed_hist[-1]
 
-        nxs = nxs[-1]
-        next_states = self.pack_state(nxs)
+        # Log the inner history of states
+        for t, s in zip(t_span[:-1], packed_hist[:-1]):
+            self.logger.log_dict(t, state=s, action=action)
 
         return next_states, packed_hist
 
