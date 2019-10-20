@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from itertools import chain
 import functools
+
 import numpy as np
 from scipy.integrate import odeint
 import gym
@@ -35,7 +36,7 @@ def infer_obs_space(systems):
 
 class BaseEnv(gym.Env):
     def __init__(self, systems: list, dt: float, infer_obs_space=True,
-                 odeint_option={}):
+                 log_dir=None, ode_step_len=2, odeint_option={}):
         self.systems = OrderedDict({s.name: s for s in systems})
 
         if infer_obs_space and not hasattr(self, 'observation_space'):
@@ -55,6 +56,11 @@ class BaseEnv(gym.Env):
 
         self.odeint_option = odeint_option
 
+        if not isinstance(ode_step_len, int):
+            ValueError("ode_step_len should be integer.")
+
+        self.t_span = np.linspace(0, dt, ode_step_len + 1)
+
     def reset(self):
         initial_states = {
             k: system.reset() for k, system in self.systems.items()
@@ -65,15 +71,18 @@ class BaseEnv(gym.Env):
 
     def get_next_states(self, t, states, action):
         xs = self.unpack_state(states)
-        t_span = [t, t + self.clock.dt]
 
+        t_span = t + self.t_span
         func = self.ode_wrapper(self.derivs)
-        nxs = odeint(func, xs, t_span, args=(action,), tfirst=True)
+        ode_hist = odeint(func, xs, t_span, args=(action,), tfirst=True)
+
+        packed_hist = [self.pack_state(_) for _ in ode_hist]
+        next_states = packed_hist[-1]
 
         nxs = nxs[-1]
         next_states = self.pack_state(nxs)
 
-        return next_states
+        return next_states, packed_hist
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
