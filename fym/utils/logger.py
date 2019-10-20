@@ -67,9 +67,6 @@ class Logger:
         os.makedirs(log_dir, exist_ok=True)
         self.path = os.path.join(log_dir, file_name)
 
-        if os.path.exists(self.path):
-            os.remove(self.path)
-
         self.f = h5py.File(self.path, 'w')
         self.max_len = max_len
         self.reset()
