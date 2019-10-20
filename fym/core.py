@@ -70,7 +70,7 @@ class BaseEnv(gym.Env):
         }
         self.states = initial_states
         self.clock.reset()
-        return self.observation(self.states)
+        return self.states
 
     def get_next_states(self, t, states, action):
         xs = self.unpack_state(states)
