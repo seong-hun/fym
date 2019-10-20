@@ -1,9 +1,12 @@
 from collections import OrderedDict
 from itertools import chain
 import functools
+
 import numpy as np
 from scipy.integrate import odeint
 import gym
+
+from fym.utils import logger
 
 
 def deep_flatten(arg):
@@ -34,8 +37,9 @@ def infer_obs_space(systems):
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems: list, dt: float, infer_obs_space=True,
-                 odeint_option={}):
+    def __init__(self, systems: list, dt, max_t, infer_obs_space=True,
+                 log_dir=None, file_name='state_history.h5',
+                 ode_step_len=2, odeint_option={}):
         self.systems = OrderedDict({s.name: s for s in systems})
 
         if infer_obs_space and not hasattr(self, 'observation_space'):
@@ -51,9 +55,14 @@ class BaseEnv(gym.Env):
         if not hasattr(self, 'action_space'):
             raise NotImplementedError('The action_space is not defined.')
 
-        self.clock = Clock(dt=dt)
-
+        self.clock = Clock(dt=dt, max_t=max_t)
+        self.logger = logger.Logger(file_name=file_name)
         self.odeint_option = odeint_option
+
+        if not isinstance(ode_step_len, int):
+            raise ValueError("ode_step_len should be integer.")
+
+        self.t_span = np.linspace(0, dt, ode_step_len + 1)
 
     def reset(self):
         initial_states = {
@@ -65,15 +74,19 @@ class BaseEnv(gym.Env):
 
     def get_next_states(self, t, states, action):
         xs = self.unpack_state(states)
-        t_span = [t, t + self.clock.dt]
 
+        t_span = t + self.t_span
         func = self.ode_wrapper(self.derivs)
-        nxs = odeint(func, xs, t_span, args=(action,), tfirst=True)
+        ode_hist = odeint(func, xs, t_span, args=(action,), tfirst=True)
 
-        nxs = nxs[-1]
-        next_states = self.pack_state(nxs)
+        packed_hist = [self.pack_state(_) for _ in ode_hist]
+        next_states = packed_hist[-1]
 
-        return next_states
+        # Log the inner history of states
+        for t, s in zip(t_span[:-1], packed_hist[:-1]):
+            self.logger.log_dict(time=t, state=s, action=action)
+
+        return next_states, packed_hist
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
@@ -134,7 +147,7 @@ class BaseSystem:
 
 
 class Clock:
-    def __init__(self, dt, max_t=None):
+    def __init__(self, dt, max_t=10):
         self.dt = dt
         self.max_t = max_t
 
