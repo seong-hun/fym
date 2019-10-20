@@ -75,15 +75,19 @@ class Logger:
         self.buffer = {}
         self.len = 0
 
+    def flush(self):
+        save_dict_to_hdf5(self.f, self.buffer)
+        self.reset()
+
     def log_dict(self, **kwargs):
         recursively_update_dict(self.buffer, kwargs)
         self.len += 1
 
         if self.len >= self.max_len:
-            save_dict_to_hdf5(self.f, self.buffer)
-            self.reset()
+            self.flush()
 
     def close(self):
+        self.flush()
         self.f.close()
 
 
