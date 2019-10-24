@@ -37,16 +37,14 @@ def infer_obs_space(systems):
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems: list, dt, max_t, infer_obs_space=True,
+    def __init__(self, systems: list, dt, max_t,
                  log_dir=None, file_name='state_history.h5',
                  ode_step_len=2, odeint_option={}):
-        self.systems = OrderedDict({s.name: s for s in systems})
 
-        if infer_obs_space and not hasattr(self, 'observation_space'):
+        self.systems, self.state_index = self.build_systems(systems)
+
+        if not hasattr(self, 'observation_space'):
             self.observation_space = self.infer_obs_space(self.systems)
-
-        # Indices for packing
-        self.state_index = [system.state_shape for system in systems]
 
         # Necessary properties for gym.Env
         if not hasattr(self, 'observation_space'):
@@ -63,6 +61,15 @@ class BaseEnv(gym.Env):
             raise ValueError("ode_step_len should be integer.")
 
         self.t_span = np.linspace(0, dt, ode_step_len + 1)
+
+    def build_systems(self, systems):
+        systems = OrderedDict({s.name: s for s in systems})
+        state_index = [system.state_shape for system in systems]
+        return systems, state_index
+
+    def append_systems(self, systems):
+        self.systems.update({s.name: s for s in systems})
+        self.state_index.append([system.state_shape for system in systems])
 
     def reset(self):
         initial_states = {
