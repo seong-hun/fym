@@ -83,9 +83,9 @@ class BaseEnv(gym.Env):
             zip(self.systems.keys(), pack(flat_state, self.state_index)))
         return packed
 
-    def unpack_state(self, states):
-        unpacked = flatten(states.values())
-        return np.hstack(unpacked)
+    def append_systems(self, systems):
+        self.systems = self.systems.append(systems)
+        self.state_index = indexing(self.systems)
 
     def step(self, action):
         raise NotImplementedError
