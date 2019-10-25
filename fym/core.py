@@ -90,6 +90,15 @@ class BaseEnv(gym.Env):
     def step(self, action):
         raise NotImplementedError
 
+    def close(self):
+        self.logger.close()
+
+    def unpack_state(self, states):
+        if not isinstance(states, OrderedDict):
+            states = OrderedDict({k: states[k] for k in self.systems.keys()})
+        unpacked = flatten(states.values())
+        return np.hstack(unpacked)
+
 
 class BaseSystem:
     def __init__(self, initial_state):

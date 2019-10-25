@@ -4,8 +4,12 @@ import os
 from datetime import datetime
 
 
-def save_dict_to_hdf5(h5file, dic):
-    recursively_save(h5file, '/', dic)
+def save(h5file, dic):
+    if not isinstance(h5file, h5py.File):
+        with h5py.File(h5file, 'w') as h5file:
+            _rec_save(h5file, '/', dic)
+    else:
+        _rec_save(h5file, '/', dic)
 
 
 def _rec_save(h5file, path, dic):
