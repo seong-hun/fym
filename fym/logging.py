@@ -6,6 +6,8 @@ from datetime import datetime
 
 def save(h5file, dic):
     if not isinstance(h5file, h5py.File):
+        if not os.path.exists(os.path.dirname(h5file)):
+            os.makedirs(os.path.dirname(h5file), exist_ok=True)
         with h5py.File(h5file, 'w') as h5file:
             _rec_save(h5file, '/', dic)
     else:
@@ -70,6 +72,7 @@ class Logger:
             )
 
         os.makedirs(log_dir, exist_ok=True)
+        self.basename = file_name
         self.path = os.path.join(log_dir, file_name)
         self.h5file = h5py.File(self.path, 'w')
         self.max_len = max_len

@@ -6,7 +6,7 @@ import numpy as np
 from scipy.integrate import odeint
 import gym
 
-import fym.logging import logging
+import fym.logging as logging
 
 
 class BaseEnv(gym.Env):
@@ -16,7 +16,7 @@ class BaseEnv(gym.Env):
         self.state_index = indexing(self.systems)
 
         if not hasattr(self, 'observation_space'):
-            self.observation_space = self.infer_obs_space(self.systems)
+            self.observation_space = infer_obs_space(self.systems)
 
         # Necessary properties for gym.Env
         if not hasattr(self, 'observation_space'):
@@ -84,8 +84,9 @@ class BaseEnv(gym.Env):
         return packed
 
     def append_systems(self, systems):
-        self.systems = self.systems.append(systems)
+        self.systems.update(systems)
         self.state_index = indexing(self.systems)
+        self.observation_space = infer_obs_space(self.systems)
 
     def step(self, action):
         raise NotImplementedError
