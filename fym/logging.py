@@ -88,10 +88,14 @@ class Logger:
         self.len += 1
 
         if self.len >= self.max_len:
-            save(self.h5file, self.buffer)
-            self.reset()
+            self.flush()
+
+    def flush(self):
+        save(self.h5file, self.buffer)
+        self.reset()
 
     def close(self):
+        self.flush()
         self.h5file.close()
 
 
