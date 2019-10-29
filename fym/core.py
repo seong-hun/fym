@@ -6,47 +6,17 @@ import numpy as np
 from scipy.integrate import odeint
 import gym
 
-from fym.utils import logger
-
-
-def deep_flatten(arg):
-    if arg == []:
-        return arg
-    if isinstance(arg, (list, tuple)):
-        return deep_flatten(arg[0]) + deep_flatten(arg[1:])
-    elif isinstance(arg, (np.ndarray, float, int)):
-        return [np.asarray(arg).ravel()]
-
-
-def flatten(arglist):
-    return [np.asarray(arg).ravel() for arg in arglist]
-
-
-def infinite_box(shape):
-    return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float32)
-
-
-def infer_obs_space(systems):
-    """
-    Infer the gym observation space from the ordered dictionary ``systems``,
-    and return a gym.spaces.Dict
-    """
-    obs_space = gym.spaces.Dict(
-        {k: infinite_box(s.state_shape) for k, s in systems.items()})
-    return obs_space
+import fym.logging as logging
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems: list, dt, max_t, infer_obs_space=True,
-                 log_dir=None, file_name='state_history.h5',
-                 ode_step_len=2, odeint_option={}):
-        self.systems = OrderedDict({s.name: s for s in systems})
+    def __init__(self, systems, dt, max_t,
+                 tmp_dir='data/tmp', ode_step_len=2, odeint_option={}):
+        self.systems = OrderedDict(systems)
+        self.state_index = indexing(self.systems)
 
-        if infer_obs_space and not hasattr(self, 'observation_space'):
-            self.observation_space = self.infer_obs_space(self.systems)
-
-        # Indices for packing
-        self.state_index = [system.state_shape for system in systems]
+        if not hasattr(self, 'observation_space'):
+            self.observation_space = infer_obs_space(self.systems)
 
         # Necessary properties for gym.Env
         if not hasattr(self, 'observation_space'):
@@ -56,7 +26,7 @@ class BaseEnv(gym.Env):
             raise NotImplementedError('The action_space is not defined.')
 
         self.clock = Clock(dt=dt, max_t=max_t)
-        self.logger = logger.Logger(file_name=file_name)
+        self.logger = logging.Logger(log_dir=tmp_dir, file_name='history.h5')
         self.odeint_option = odeint_option
 
         if not isinstance(ode_step_len, int):
@@ -84,7 +54,7 @@ class BaseEnv(gym.Env):
 
         # Log the inner history of states
         for t, s in zip(t_span[:-1], packed_hist[:-1]):
-            self.logger.log_dict(time=t, state=s, action=action)
+            self.logger.record(time=t, state=s, action=action)
 
         return next_states, packed_hist
 
@@ -113,23 +83,36 @@ class BaseEnv(gym.Env):
             zip(self.systems.keys(), pack(flat_state, self.state_index)))
         return packed
 
-    def unpack_state(self, states):
-        unpacked = flatten(states.values())
-        return np.hstack(unpacked)
+    def append_systems(self, systems):
+        self.systems.update(systems)
+        self.state_index = indexing(self.systems)
+        self.observation_space = infer_obs_space(self.systems)
 
     def step(self, action):
         raise NotImplementedError
 
+    def close(self):
+        self.logger.close()
+
+    def unpack_state(self, states):
+        if not isinstance(states, OrderedDict):
+            states = OrderedDict({k: states[k] for k in self.systems.keys()})
+        unpacked = flatten(states.values())
+        return np.hstack(unpacked)
+
 
 class BaseSystem:
-    def __init__(self, name, initial_state, control_size=0, deriv=None):
-        self.name = name
+    def __init__(self, initial_state):
         self.initial_state = initial_state
         self.state_shape = self.initial_state.shape
-        self.control_size = control_size
 
-        if callable(deriv):
-            self.deriv = deriv
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
 
     @property
     def initial_state(self):
@@ -175,3 +158,35 @@ def pack(flat_state, indices):
         packed.append(
             flat_state[div_points[i]:div_points[i+1]].reshape(indices[i]))
     return packed
+
+
+def indexing(systems):
+    index = [system.state_shape for system in systems.values()]
+    return index
+
+
+def deep_flatten(arg):
+    if arg == []:
+        return arg
+    if isinstance(arg, (list, tuple)):
+        return deep_flatten(arg[0]) + deep_flatten(arg[1:])
+    elif isinstance(arg, (np.ndarray, float, int)):
+        return [np.asarray(arg).ravel()]
+
+
+def flatten(arglist):
+    return [np.asarray(arg).ravel() for arg in arglist]
+
+
+def infinite_box(shape):
+    return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float32)
+
+
+def infer_obs_space(systems):
+    """
+    Infer the gym observation space from the ordered dictionary ``systems``,
+    and return a gym.spaces.Dict
+    """
+    obs_space = gym.spaces.Dict(
+        {k: infinite_box(s.state_shape) for k, s in systems.items()})
+    return obs_space

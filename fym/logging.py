@@ -4,11 +4,18 @@ import os
 from datetime import datetime
 
 
-def save_dict_to_hdf5(h5file, dic):
-    recursively_save(h5file, '/', dic)
+def save(h5file, dic):
+    if not isinstance(h5file, h5py.File):
+        if not os.path.exists(os.path.dirname(h5file)):
+            os.makedirs(os.path.dirname(h5file), exist_ok=True)
+        with h5py.File(h5file, 'w') as h5file:
+            _rec_save(h5file, '/', dic)
+    else:
+        _rec_save(h5file, '/', dic)
 
 
-def recursively_save(h5file, path, dic):
+def _rec_save(h5file, path, dic):
+    """Recursively save the ``dic`` into the HDF5 file."""
     for key, val in dic.items():
         if isinstance(val, (np.ndarray, list)):
             val = np.stack(val)
@@ -25,31 +32,31 @@ def recursively_save(h5file, path, dic):
                 dset.resize(dset.shape[0] + len(val), axis=0)
                 dset[-len(val):] = val
         elif isinstance(val, dict):
-            recursively_save(h5file, path + key + '/', val)
+            _rec_save(h5file, path + key + '/', val)
         else:
             raise ValueError(f'Cannot save {type(val)} type')
 
 
-def load_dict_from_hdf5(filename):
-    with h5py.File(filename, 'r') as h5file:
-        return recursively_load_dict_contents_from_group(h5file, '/')
+def load(path):
+    with h5py.File(path, 'r') as h5file:
+        return _rec_load(h5file, '/')
 
 
-def recursively_load_dict_contents_from_group(h5file, path):
+def _rec_load(h5file, path):
     ans = {}
     for key, item in h5file[path].items():
         if isinstance(item, h5py._hl.dataset.Dataset):
             ans[key] = item[()]
         elif isinstance(item, h5py._hl.group.Group):
-            ans[key] = recursively_load_dict_contents_from_group(
-                h5file, path + key + '/')
+            ans[key] = _rec_load(h5file, path + key + '/')
     return ans
 
 
-def recursively_update_dict(base_dict, input_dict):
+def _rec_update(base_dict, input_dict):
+    """Recursively update ``base_dict`` with ``input_dict``."""
     for key, val in input_dict.items():
         if isinstance(val, dict):
-            recursively_update_dict(base_dict.setdefault(key, {}), val)
+            _rec_update(base_dict.setdefault(key, {}), val)
         elif not isinstance(val, str):
             base_dict.setdefault(key, []).append(val)
         else:
@@ -57,7 +64,7 @@ def recursively_update_dict(base_dict, input_dict):
 
 
 class Logger:
-    def __init__(self, file_name, max_len=1e2, log_dir=None):
+    def __init__(self, log_dir=None, file_name='data.h5', max_len=1e2):
         if log_dir is None:
             log_dir = os.path.join(
                 'log',
@@ -65,9 +72,9 @@ class Logger:
             )
 
         os.makedirs(log_dir, exist_ok=True)
+        self.basename = file_name
         self.path = os.path.join(log_dir, file_name)
-
-        self.f = h5py.File(self.path, 'w')
+        self.h5file = h5py.File(self.path, 'w')
         self.max_len = max_len
         self.reset()
 
@@ -75,16 +82,17 @@ class Logger:
         self.buffer = {}
         self.len = 0
 
-    def log_dict(self, **kwargs):
-        recursively_update_dict(self.buffer, kwargs)
+    def record(self, **kwargs):
+        """Record a dictionary or a numeric data preserving the structure."""
+        _rec_update(self.buffer, kwargs)
         self.len += 1
 
         if self.len >= self.max_len:
-            save_dict_to_hdf5(self.f, self.buffer)
+            save(self.h5file, self.buffer)
             self.reset()
 
     def close(self):
-        self.f.close()
+        self.h5file.close()
 
 
 if __name__ == '__main__':
