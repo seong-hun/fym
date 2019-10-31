@@ -17,10 +17,10 @@ class BaseEnv(gym.Env):
 
         if not hasattr(self, 'observation_space'):
             self.observation_space = infer_obs_space(self.systems)
-
-        # Necessary properties for gym.Env
-        if not hasattr(self, 'observation_space'):
-            raise NotImplementedError('The observation_space is not defined.')
+            print(
+                "Observation space is inferred using the initial states "
+                f"of the systems: {self.systems.keys()}"
+            )
 
         if not hasattr(self, 'action_space'):
             raise NotImplementedError('The action_space is not defined.')
