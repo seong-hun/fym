@@ -18,5 +18,5 @@ setup(
     license='',
     include_package_data=True,
     packages=find_packages(),
-    install_requires=['gym', 'matplotlib', 'numdifftools']
+    install_requires=['gym', 'matplotlib', 'numdifftools', 'h5py']
 )
