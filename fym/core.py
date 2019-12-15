@@ -13,7 +13,8 @@ import fym.logging as logging
 
 class BaseEnv(gym.Env):
     def __init__(self, systems, dt, max_t,
-                 tmp_dir='data/tmp', ode_step_len=2, odeint_option={}):
+                 tmp_dir='data/tmp', logging_off=False,
+                 ode_step_len=2, odeint_option={}):
         self.systems = OrderedDict(systems)
         self.state_index = indexing(self.systems)
 
@@ -28,7 +29,13 @@ class BaseEnv(gym.Env):
             raise NotImplementedError('The action_space is not defined.')
 
         self.clock = Clock(dt=dt, max_t=max_t)
-        self.logger = logging.Logger(log_dir=tmp_dir, file_name='history.h5')
+
+        self.logging_off = logging_off
+        if not logging_off:
+            self.logger = logging.Logger(
+                log_dir=tmp_dir, file_name='history.h5'
+            )
+
         self.odeint_option = odeint_option
         self.tqdm_bar = None
 
@@ -43,6 +50,7 @@ class BaseEnv(gym.Env):
         }
         self.states = initial_states
         self.clock.reset()
+
         return self.states
 
     def get_next_states(self, t, states, action):
@@ -56,8 +64,9 @@ class BaseEnv(gym.Env):
         next_states = packed_hist[-1]
 
         # Log the inner history of states
-        for t, s in zip(t_span[:-1], packed_hist[:-1]):
-            self.logger.record(time=t, state=s, action=action)
+        if not self.logging_off:
+            for t, s in zip(t_span[:-1], packed_hist[:-1]):
+                self.logger.record(time=t, state=s, action=action)
 
         return next_states, packed_hist
 
@@ -95,7 +104,8 @@ class BaseEnv(gym.Env):
         raise NotImplementedError
 
     def close(self):
-        self.logger.close()
+        if not self.logging_off:
+            self.logger.close()
 
     def unpack_state(self, states):
         if not isinstance(states, OrderedDict):

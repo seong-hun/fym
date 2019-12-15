@@ -74,11 +74,11 @@ class Logger:
         os.makedirs(log_dir, exist_ok=True)
         self.basename = file_name
         self.path = os.path.join(log_dir, file_name)
-        self.h5file = h5py.File(self.path, 'w')
         self.max_len = max_len
-        self.reset()
+        self.h5file = h5py.File(self.path, 'w')
+        self.clear()
 
-    def reset(self):
+    def clear(self):
         self.buffer = {}
         self.len = 0
 
@@ -92,7 +92,7 @@ class Logger:
 
     def flush(self):
         save(self.h5file, self.buffer)
-        self.reset()
+        self.clear()
 
     def close(self):
         self.flush()
