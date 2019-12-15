@@ -74,7 +74,7 @@ class BaseEnv(gym.Env):
         @functools.wraps(func)
         def wrapper(t, y, *args):
             states = self.pack_state(y)
-            return func(t, states, *args)
+            return self.unpack_state(func(t, states, *args))
         return wrapper
 
     def derivs(self, t, states, action):
@@ -108,10 +108,16 @@ class BaseEnv(gym.Env):
             self.logger.close()
 
     def unpack_state(self, states):
-        if not isinstance(states, OrderedDict):
-            states = OrderedDict({k: states[k] for k in self.systems.keys()})
-        unpacked = flatten(states.values())
-        return np.hstack(unpacked)
+        if isinstance(states, (list, np.ndarray)):
+            if np.ndim(states) != 1:
+                states = flatten(states)
+
+        elif isinstance(states, dict):
+            if not isinstance(states, OrderedDict):
+                states = OrderedDict({k: states[k] for k in self.systems.keys()})
+            states = flatten(states.values())
+
+        return np.hstack(states)
 
     def render(self, mode="tqdm"):
         if mode == "tqdm":

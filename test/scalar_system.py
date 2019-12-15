@@ -33,7 +33,7 @@ class Env(BaseEnv):
         xdot = {
             "main": self.systems["main"].deriv(x, u)
         }
-        return self.unpack_state(xdot)
+        return xdot
 
 
 class ScalarSystem(BaseSystem):
