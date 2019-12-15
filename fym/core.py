@@ -133,7 +133,7 @@ class BaseSystem:
 
     @initial_state.setter
     def initial_state(self, val):
-        self._initial_state = np.asarray(val)
+        self._initial_state = np.atleast_1d(val)
 
     def deriv(self):
         raise NotImplementedError("deriv method is not defined in the system.")
