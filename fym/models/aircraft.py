@@ -54,3 +54,41 @@ class Aircraft3Dof(BaseSystem):
                   - dWydt*np.cos(psi)/V/np.cos(gamma))
 
         return np.array([dxdt, dydt, dzdt, dVdt, dgammadt, dpsidt])
+
+
+class F16LinearLateral(BaseSystem):
+    """
+    Reference:
+        B. L. Stevens et al. "Aircraft Control and Simulation", 3/e, 2016
+        Example 5.3-1: LQR Design for F-16 Lateral Regulator
+    """
+    A = np.array([
+        [-0.322, 0.064, 0.0364, -0.9917, 0.0003, 0.0008, 0],
+        [0, 0, 1, 0.0037, 0, 0, 0],
+        [-30.6492, 0, -3.6784, 0.6646, -0.7333, 0.1315, 0],
+        [8.5396, 0, -0.0254, -0.4764, -0.0319, -0.062, 0],
+        [0, 0, 0, 0, -20.2, 0, 0],
+        [0, 0, 0, 0, 0, -20.2, 0],
+        [0, 0, 0, 57.2958, 0, 0, -1]
+    ])
+    B = np.array([
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [20.2, 0],
+        [0, 20.2],
+        [0, 0]
+    ])
+    C = np.array([
+        [0, 0, 0, 57.2958, 0, 0, -1],
+        [0, 0, 57.2958, 0, 0, 0, 0],
+        [57.2958, 0, 0, 0, 0, 0, 0],
+        [0, 57.2958, 0, 0, 0, 0, 0]
+    ])
+
+    def __init__(self, initial_state=[1, 0, 0, 0, 0, 0, 0]):
+        super().__init__(initial_state)
+
+    def deriv(self, x, u):
+        return self.A.dot(x) + self.B.dot(u)
