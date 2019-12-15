@@ -4,6 +4,8 @@ import functools
 
 import numpy as np
 from scipy.integrate import odeint
+import tqdm
+
 import gym
 
 import fym.logging as logging
@@ -28,6 +30,7 @@ class BaseEnv(gym.Env):
         self.clock = Clock(dt=dt, max_t=max_t)
         self.logger = logging.Logger(log_dir=tmp_dir, file_name='history.h5')
         self.odeint_option = odeint_option
+        self.tqdm_bar = None
 
         if not isinstance(ode_step_len, int):
             raise ValueError("ode_step_len should be integer.")
@@ -100,6 +103,16 @@ class BaseEnv(gym.Env):
         unpacked = flatten(states.values())
         return np.hstack(unpacked)
 
+    def render(self, mode="tqdm"):
+        if mode == "tqdm":
+            if self.tqdm_bar is None:
+                self.tqdm_bar = tqdm.tqdm(
+                    total=self.clock.max_len,
+                    desc="Time"
+                )
+
+            self.tqdm_bar.update(1)
+
 
 class BaseSystem:
     def __init__(self, initial_state):
@@ -133,6 +146,7 @@ class Clock:
     def __init__(self, dt, max_t=10):
         self.dt = dt
         self.max_t = max_t
+        self.max_len = int(max_t / dt) + 1
 
     def reset(self):
         self.t = 0
