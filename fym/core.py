@@ -1,5 +1,4 @@
-from collections import OrderedDict
-from itertools import chain
+import itertools
 import functools
 
 import numpy as np
@@ -13,9 +12,9 @@ import fym.logging as logging
 
 class BaseEnv(gym.Env):
     def __init__(self, systems, dt, max_t,
-                 tmp_dir='data/tmp', logging_off=False,
+                 tmp_dir='data/tmp', logging_off=True,
                  ode_step_len=2, odeint_option={}):
-        self.systems = OrderedDict(systems)
+        self.systems = dict(systems)
         self.state_index = indexing(self.systems)
 
         if not hasattr(self, 'observation_space'):
@@ -91,7 +90,7 @@ class BaseEnv(gym.Env):
         raise NotImplementedError
 
     def pack_state(self, flat_state):
-        packed = OrderedDict(
+        packed = dict(
             zip(self.systems.keys(), pack(flat_state, self.state_index)))
         return packed
 
@@ -113,8 +112,6 @@ class BaseEnv(gym.Env):
                 states = flatten(states)
 
         elif isinstance(states, dict):
-            if not isinstance(states, OrderedDict):
-                states = OrderedDict({k: states[k] for k in self.systems.keys()})
             states = flatten(states.values())
 
         return np.hstack(states)
@@ -173,6 +170,9 @@ class Clock:
     def get(self):
         return self.t
 
+    def time_over(self):
+        return self.get() >= self.max_t
+
 
 def pack(flat_state, indices):
     """
@@ -180,13 +180,33 @@ def pack(flat_state, indices):
     The ``indices`` is a list or a tuple which must have the equal length
     to the ``flat_state``.
     """
-    div_points = [0] + np.cumsum(
-        [np.prod(index) for index in indices]).tolist()
 
     packed = []
-    for i in range(len(indices)):
+    tmp = 0
+    for index in indices:
+        mult = functools.reduce(lambda a, b: a * b, index)
         packed.append(
-            flat_state[div_points[i]:div_points[i+1]].reshape(indices[i]))
+            flat_state[tmp:tmp + mult].reshape(index)
+        )
+        tmp += mult
+    """
+    > timeit: 3.74 micro
+    """
+
+    """
+    div_points = [0] + list(itertools.accumulate(
+        [functools.reduce(lambda a, b: a * b, i) for i in indices],
+    ))
+
+    packed = [
+        flat_state[div_points[i]:div_points[i+1]].reshape(indices[i])
+        for i in range(len(indices))
+    ]
+    """
+    """
+    > timeit: 5.22 micro
+    """
+
     return packed
 
 
