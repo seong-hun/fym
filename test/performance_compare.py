@@ -10,25 +10,25 @@ from fym.agents.LQR import clqr
 
 class FastEnv(core.BaseEnv):
     def __init__(self, dt=0.01, max_t=10, rand_init=True, ode_step_len=2):
-        self.system = aircraft.F16LinearLateral()
+        self.main = aircraft.F16LinearLateral()
+        self.aux = aircraft.F16LinearLateral()
         self.rand_init = rand_init
         self.observation_space = core.infinite_box((7,))
         self.action_space = core.infinite_box((2,))
         self.clock = core.Clock(dt=dt, max_t=max_t)
-        self.ode_func = lambda t, x, u: self.system.deriv(x, u)
         self.t_span = np.linspace(0, dt, ode_step_len + 1)
         self.logging_off = True
 
+    def derivs(self, t, x, u):
+        x1, x2 = x[:7], x[7:]
+        u1, u2 = u[:2], u[2:]
+        dot_x1 = self.main.deriv(x1, u1)
+        dot_x2 = self.aux.deriv(x2, u2)
+        return np.hstack([dot_x1, dot_x2])
+
     def reset(self):
-        self.state = self.system.initial_state
+        self.state = np.hstack([self.main.initial_state] * 2)
         self.clock.reset()
-
-        if self.rand_init:
-            self.state = (
-                np.array([1, 20, 20, 6, 80, 80, 0])
-                * np.random.uniform(-1.5, 1.5)
-            )
-
         return self.state
 
     def step(self, action):
@@ -36,7 +36,7 @@ class FastEnv(core.BaseEnv):
         time = self.clock.get()
 
         ode_hist = odeint(
-            func=self.ode_func,
+            func=self.derivs,
             y0=state,
             t=time + self.t_span,
             args=(action,),
@@ -64,10 +64,10 @@ class FastEnv(core.BaseEnv):
 
 class OriginalEnv(core.BaseEnv):
     def __init__(self, logging_off=False):
-        main = aircraft.F16LinearLateral()
         super().__init__(
             systems={
-                "main": main,
+                "main": aircraft.F16LinearLateral(),
+                "aux": aircraft.F16LinearLateral(),
             },
             dt=0.01,
             max_t=10,
@@ -90,9 +90,20 @@ class OriginalEnv(core.BaseEnv):
         return self.observation(), 0, done, info
 
     def derivs(self, time, action):
-        x, = [system.state for system in self.systems.values()]
+        x1, x2 = [system.state for system in self.systems.values()]
+        u1, u2 = action[:2], action[2:]
+
         main = self.systems["main"]
-        main.dot = main.deriv(x, action)
+        aux = self.systems["aux"]
+        main.dot = main.deriv(x1, u1)
+        aux.dot = aux.deriv(x2, u2)
+
+        # x, y = [self.states[ind] for ind in self.index.values()]
+        # x = self.states[self.index["main"]]
+
+        # states_dot = np.zeros_like(self.states)
+        # states_dot[self.index["main"]] = self.main.deriv(x, action)
+        # return states_dot
 
 
 class Lqr:
@@ -103,7 +114,8 @@ class Lqr:
         self.K = clqr(sys.A, sys.B, self.Q, self.R)[0]
 
     def get_action(self, x):
-        return -self.K.dot(x)
+        x1, x2 = x[:7], x[7:]
+        return np.hstack([-self.K.dot(x1), -self.K.dot(x2)])
 
 
 def run(env, agent=None, number=1, text=""):
@@ -147,7 +159,7 @@ def test_linear_system():
     t1 = run(env, agent, number, "Original Env (logging off)")
 
     env = FastEnv()
-    agent = Lqr(env.system)
+    agent = Lqr(env.main)
     t2 = run(env, agent, number, "Fast Env (Euler integral)")
 
     print("\t".join([
