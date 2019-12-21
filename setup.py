@@ -9,7 +9,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='fym',
-    version='0.3.0',
+    version='0.4.0',
     url='https://github.com/fdcl-nrf/fym',
     author='SNU FDCL',
     description='SNU FDCL Fym: Flight simulator for various purpose',
