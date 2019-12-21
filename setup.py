@@ -9,7 +9,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='fym',
-    version='0.3.1',
+    version='0.3.2',
     url='https://github.com/fdcl-nrf/fym',
     author='SNU FDCL',
     description='SNU FDCL Fym: Flight simulator for various purpose',
@@ -18,8 +18,8 @@ setup(
     license='',
     include_package_data=True,
     packages=find_packages(),
+    python_requires=">=3.7",
     install_requires=[
-        'python>=3.7',
         'gym',
         'matplotlib',
         'numdifftools',
