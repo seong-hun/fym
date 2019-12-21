@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.integrate import odeint
 import time
 
 import fym
@@ -8,12 +9,15 @@ from fym.agents.LQR import clqr
 
 
 class FastEnv(core.BaseEnv):
-    def __init__(self, dt=0.01, max_t=10, rand_init=True):
+    def __init__(self, dt=0.01, max_t=10, rand_init=True, ode_step_len=2):
         self.system = aircraft.F16LinearLateral()
         self.rand_init = rand_init
         self.observation_space = core.infinite_box((7,))
         self.action_space = core.infinite_box((2,))
         self.clock = core.Clock(dt=dt, max_t=max_t)
+        self.ode_func = lambda t, x, u: self.system.deriv(x, u)
+        self.t_span = np.linspace(0, dt, ode_step_len + 1)
+        self.logging_off = True
 
     def reset(self):
         self.state = self.system.initial_state
@@ -31,7 +35,14 @@ class FastEnv(core.BaseEnv):
         state = self.state
         time = self.clock.get()
 
-        next_state = state + self.system.deriv(state, action) * self.clock.dt
+        ode_hist = odeint(
+            func=self.ode_func,
+            y0=state,
+            t=time + self.t_span,
+            args=(action,),
+            tfirst=True
+        )
+        next_state = ode_hist[-1]
 
         # Q = np.array([50, 100, 100, 50, 0, 0, 1])
         # R = np.array([0.1])
@@ -110,7 +121,10 @@ def run(env, agent=None, number=1, text=""):
 
             if done:
                 break
+
     t1 = time.time()
+
+    env.close()
 
     print("\t".join([
         f"{text}:",
