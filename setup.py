@@ -18,5 +18,12 @@ setup(
     license='',
     include_package_data=True,
     packages=find_packages(),
-    install_requires=['gym', 'matplotlib', 'numdifftools', 'h5py', 'tqdm']
+    install_requires=[
+        'python >= 3.7',
+        'gym',
+        'matplotlib',
+        'numdifftools',
+        'h5py',
+        'tqdm'
+    ]
 )
