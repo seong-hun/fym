@@ -51,45 +51,12 @@ class FastEnv(core.BaseEnv):
         return next_state, reward, time > self.clock.max_t, info
 
 
-class NewEnv(core.BaseEnv):
-    def __init__(self, logging_off=False):
-        system = aircraft.F16LinearLateral()
-        super().__init__(
-            systems={
-                "main": system,
-            },
-            dt=0.01,
-            max_t=10,
-            logging_off=logging_off,
-        )
-
-    def reset(self):
-        return self.observation(super().reset())
-
-    def step(self, action):
-        states = self.states
-        time = self.clock.get()
-        done = self.clock.time_over()
-        next_states, _ = self.get_next_states(time, states, action)
-
-        self.states = next_states
-        self.clock.tick()
-        return self.observation(next_states), 0, done, {}
-
-    def derivs(self, time, states, action):
-        x, = states.values()
-        return {"main": self.systems["main"].deriv(x, action)}
-
-    def observation(self, states):
-        return states["main"]
-
-
 class OriginalEnv(core.BaseEnv):
     def __init__(self, logging_off=False):
-        system = aircraft.F16LinearLateral()
+        main = aircraft.F16LinearLateral()
         super().__init__(
             systems={
-                "main": system,
+                "main": main,
             },
             dt=0.01,
             max_t=10,
@@ -97,24 +64,24 @@ class OriginalEnv(core.BaseEnv):
         )
 
     def reset(self):
-        return self.observation(super().reset())
+        super().reset()
+        return self.observation()
+
+    def observation(self):
+        return self.observe_flat()
 
     def step(self, action):
-        states = self.states
-        time = self.clock.get()
         done = self.clock.time_over()
-        next_states, _ = self.get_next_states(time, states, action)
+        info = {
+            "states": self.observe_dict()
+        }
+        self.update(action)
+        return self.observation(), 0, done, info
 
-        self.states = next_states
-        self.clock.tick()
-        return self.observation(next_states), 0, done, {}
-
-    def derivs(self, time, states, action):
-        x, = states.values()
-        return {"main": self.systems["main"].deriv(x, action)}
-
-    def observation(self, states):
-        return states["main"]
+    def derivs(self, time, action):
+        x, = [system.state for system in self.systems.values()]
+        main = self.systems["main"]
+        main.dot = main.deriv(x, action)
 
 
 class Lqr:
@@ -151,21 +118,28 @@ def run(env, agent=None, number=1, text=""):
         f"Total: {t1 - t0:.4} sec",
     ]))
 
+    return t1 - t0
+
 
 def test_linear_system():
-    number = 10
+    number = 20
 
     env = OriginalEnv()
     agent = Lqr(env.systems["main"])
-    run(env, agent, number, "Original Env (logging on)")
+    t0 = run(env, agent, number, "Original Env (logging on)")
 
     env = OriginalEnv(logging_off=True)
     agent = Lqr(env.systems["main"])
-    run(env, agent, number, "Original Env (logging off)")
+    t1 = run(env, agent, number, "Original Env (logging off)")
 
     env = FastEnv()
     agent = Lqr(env.system)
-    run(env, agent, number, "Fast Env (Euler integral)")
+    t2 = run(env, agent, number, "Fast Env (Euler integral)")
+
+    print("\t".join([
+        f"{t0/t2:5.2f}",
+        f"{t1/t2:5.2f}",
+    ]))
 
 
 def test_nonlinear_system():
