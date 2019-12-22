@@ -90,20 +90,12 @@ class OriginalEnv(core.BaseEnv):
         return self.observation(), 0, done, info
 
     def derivs(self, time, action):
-        x1, x2 = [system.state for system in self.systems.values()]
         u1, u2 = action[:2], action[2:]
 
         main = self.systems["main"]
         aux = self.systems["aux"]
-        main.dot = main.deriv(x1, u1)
-        aux.dot = aux.deriv(x2, u2)
-
-        # x, y = [self.states[ind] for ind in self.index.values()]
-        # x = self.states[self.index["main"]]
-
-        # states_dot = np.zeros_like(self.states)
-        # states_dot[self.index["main"]] = self.main.deriv(x, action)
-        # return states_dot
+        main.dot = main.deriv(main.state, u1)
+        aux.dot = aux.deriv(aux.state, u2)
 
 
 class Lqr:

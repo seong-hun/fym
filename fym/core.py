@@ -114,11 +114,6 @@ class BaseEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def pack_state(self, flat_state):
-        packed = dict(
-            zip(self.systems.keys(), pack(flat_state, self.state_index)))
-        return packed
-
     def append_systems(self, systems):
         self.systems.update(systems)
         self.indexing()
@@ -130,16 +125,6 @@ class BaseEnv(gym.Env):
     def close(self):
         if not self.logging_off:
             self.logger.close()
-
-    def unpack_state(self, states):
-        if isinstance(states, (list, np.ndarray)):
-            if np.ndim(states) != 1:
-                states = flatten(states)
-
-        elif isinstance(states, dict):
-            states = flatten(states.values())
-
-        return np.hstack(states)
 
     def render(self, mode="tqdm"):
         if mode == "tqdm":
@@ -215,23 +200,6 @@ def pack(flat_state, indices):
             flat_state[tmp:tmp + mult].reshape(index)
         )
         tmp += mult
-    """
-    > timeit: 3.74 micro
-    """
-
-    """
-    div_points = [0] + list(itertools.accumulate(
-        [functools.reduce(lambda a, b: a * b, i) for i in indices],
-    ))
-
-    packed = [
-        flat_state[div_points[i]:div_points[i+1]].reshape(indices[i])
-        for i in range(len(indices))
-    ]
-    """
-    """
-    > timeit: 5.22 micro
-    """
 
     return packed
 
@@ -243,10 +211,6 @@ def deep_flatten(arg):
         return deep_flatten(arg[0]) + deep_flatten(arg[1:])
     elif isinstance(arg, (np.ndarray, float, int)):
         return [np.asarray(arg).ravel()]
-
-
-def flatten(arglist):
-    return [np.asarray(arg).ravel() for arg in arglist]
 
 
 def infinite_box(shape):
