@@ -44,30 +44,20 @@ class FastEnv(core.BaseEnv):
         )
         next_state = ode_hist[-1]
 
-        # Q = np.array([50, 100, 100, 50, 0, 0, 1])
-        # R = np.array([0.1])
-        # reward = -(Q * states["main"]**2).sum() - (R * action**2).sum()
         reward = 0
-
-        info = dict(
-            time=time,
-            state=state,
-            control=action,
-            reward=reward
-        )
 
         self.state = next_state
         self.clock.tick()
 
-        return next_state, reward, time > self.clock.max_t, info
+        return next_state, reward, time > self.clock.max_t, {}
 
 
 class OriginalEnv(core.BaseEnv):
     def __init__(self, logging_off=False):
         super().__init__(
-            systems={
+            systems_dict={
                 "main": aircraft.F16LinearLateral(),
-                "aux": aircraft.F16LinearLateral(),
+                "aux": core.BaseSystem([1, 0, 0, 0, 0, 0, 0]),
             },
             dt=0.01,
             max_t=10,
@@ -83,19 +73,15 @@ class OriginalEnv(core.BaseEnv):
 
     def step(self, action):
         done = self.clock.time_over()
-        info = {
-            "states": self.observe_dict()
-        }
         self.update(action)
-        return self.observation(), 0, done, info
+        return self.observation(), 0, done, {}
 
     def derivs(self, time, action):
         u1, u2 = action[:2], action[2:]
 
-        main = self.systems["main"]
-        aux = self.systems["aux"]
-        main.dot = main.deriv(main.state, u1)
-        aux.dot = aux.deriv(aux.state, u2)
+        main, aux = self.systems
+        main.set_dot(main.deriv(main.state, u1))
+        aux.set_dot(main.A.dot(aux.state) + main.B.dot(u2))
 
 
 class Lqr:
@@ -143,11 +129,11 @@ def test_linear_system():
     number = 20
 
     env = OriginalEnv()
-    agent = Lqr(env.systems["main"])
+    agent = Lqr(env.systems_dict["main"])
     t0 = run(env, agent, number, "Original Env (logging on)")
 
     env = OriginalEnv(logging_off=True)
-    agent = Lqr(env.systems["main"])
+    agent = Lqr(env.systems_dict["main"])
     t1 = run(env, agent, number, "Original Env (logging off)")
 
     env = FastEnv()
@@ -158,10 +144,6 @@ def test_linear_system():
         f"{t0/t2:5.2f}",
         f"{t1/t2:5.2f}",
     ]))
-
-
-def test_nonlinear_system():
-    pass
 
 
 if __name__ == "__main__":

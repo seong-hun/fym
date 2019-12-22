@@ -11,17 +11,18 @@ import fym.logging as logging
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems, dt, max_t,
+    def __init__(self, systems_dict, dt, max_t,
                  tmp_dir='data/tmp', logging_off=True,
                  ode_step_len=2, odeint_option={}):
-        self.systems = systems
+        self.systems_dict = systems_dict
+        self.systems = systems_dict.values()
         self.indexing()
 
         if not hasattr(self, 'observation_space'):
-            self.observation_space = infer_obs_space(self.systems)
+            self.observation_space = infer_obs_space(systems_dict)
             print(
                 "Observation space is inferred using the initial states "
-                f"of the systems: {self.systems.keys()}"
+                f"of the systems: {self.systems_dict.keys()}"
             )
 
         if not hasattr(self, 'action_space'):
@@ -46,24 +47,24 @@ class BaseEnv(gym.Env):
 
     def indexing(self):
         start = 0
-        for system in self.systems.values():
+        for system in self.systems:
             size = functools.reduce(lambda a, b: a * b, system.state_shape)
             system.flat_index = slice(start, start + size)
 
     def reset(self):
-        for system in self.systems.values():
+        for system in self.systems:
             system.reset()
         self.clock.reset()
 
     def observe_dict(self):
         return {
             name: system.state
-            for name, system in self.systems.items()
+            for name, system in self.systems_dict.items()
         }
 
     def observe_flat(self):
         return np.hstack([
-            system.state.ravel() for system in self.systems.values()
+            system.state.ravel() for system in self.systems
         ])
 
     def update(self, action):
@@ -78,7 +79,7 @@ class BaseEnv(gym.Env):
 
         # Update the systems' state
         y = ode_hist[-1]
-        for system in self.systems.values():
+        for system in self.systems:
             system.state = y[system.flat_index].reshape(system.state_shape)
 
         # Log the inner history of states
@@ -86,7 +87,7 @@ class BaseEnv(gym.Env):
             for t, y in zip(t_span[:-1], ode_hist[:-1]):
                 state_dict = {
                     name: y[system.flat_index].reshape(system.state_shape)
-                    for name, system in self.systems.items()
+                    for name, system in self.systems_dict.items()
                 }
                 self.logger.record(time=t, state=state_dict, action=action)
 
@@ -95,10 +96,10 @@ class BaseEnv(gym.Env):
     def ode_wrapper(self, func):
         @functools.wraps(func)
         def wrapper(t, y, *args):
-            for system in self.systems.values():
+            for system in self.systems:
                 system.state = y[system.flat_index].reshape(system.state_shape)
             self.derivs(t, *args)
-            return np.hstack([system.dot for system in self.systems.values()])
+            return np.hstack([system._dot for system in self.systems])
         return wrapper
 
     def derivs(self, t, states, action):
@@ -115,9 +116,9 @@ class BaseEnv(gym.Env):
         raise NotImplementedError
 
     def append_systems(self, systems):
-        self.systems.update(systems)
+        self.systems_dict.update(systems)
         self.indexing()
-        self.observation_space = infer_obs_space(self.systems)
+        self.observation_space = infer_obs_space(self.systems_dict)
 
     def step(self, action):
         raise NotImplementedError
@@ -164,6 +165,9 @@ class BaseSystem:
     def reset(self):
         self.state = self.initial_state
         return self.state
+
+    def set_dot(self, deriv):
+        self._dot = deriv
 
 
 class Clock:
