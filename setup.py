@@ -18,8 +18,8 @@ setup(
     license='',
     include_package_data=True,
     packages=find_packages(),
+    python_requires=">=3.7",
     install_requires=[
-        'python >= 3.7',
         'gym',
         'matplotlib',
         'numdifftools',
