@@ -11,17 +11,18 @@ import fym.logging as logging
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems, dt, max_t,
+    def __init__(self, systems_dict, dt, max_t,
                  tmp_dir='data/tmp', logging_off=True,
                  ode_step_len=2, odeint_option={}):
-        self.systems = dict(systems)
-        self.state_index = indexing(self.systems)
+        self.systems_dict = systems_dict
+        self.systems = systems_dict.values()
+        self.indexing()
 
         if not hasattr(self, 'observation_space'):
-            self.observation_space = infer_obs_space(self.systems)
+            self.observation_space = infer_obs_space(systems_dict)
             print(
                 "Observation space is inferred using the initial states "
-                f"of the systems: {self.systems.keys()}"
+                f"of the systems: {self.systems_dict.keys()}"
             )
 
         if not hasattr(self, 'action_space'):
@@ -35,6 +36,7 @@ class BaseEnv(gym.Env):
                 log_dir=tmp_dir, file_name='history.h5'
             )
 
+        self.ode_func = self.ode_wrapper(self.derivs)
         self.odeint_option = odeint_option
         self.tqdm_bar = None
 
@@ -43,37 +45,61 @@ class BaseEnv(gym.Env):
 
         self.t_span = np.linspace(0, dt, ode_step_len + 1)
 
+    def indexing(self):
+        start = 0
+        for system in self.systems:
+            size = functools.reduce(lambda a, b: a * b, system.state_shape)
+            system.flat_index = slice(start, start + size)
+
     def reset(self):
-        initial_states = {
-            k: system.reset() for k, system in self.systems.items()
-        }
-        self.states = initial_states
+        for system in self.systems:
+            system.reset()
         self.clock.reset()
 
-        return self.states
+    def observe_dict(self):
+        return {
+            name: system.state
+            for name, system in self.systems_dict.items()
+        }
 
-    def get_next_states(self, t, states, action):
-        xs = self.unpack_state(states)
+    def observe_flat(self):
+        return np.hstack([
+            system.state.ravel() for system in self.systems
+        ])
 
-        t_span = t + self.t_span
-        func = self.ode_wrapper(self.derivs)
-        ode_hist = odeint(func, xs, t_span, args=(action,), tfirst=True)
+    def update(self, action):
+        t_span = self.clock.get() + self.t_span
+        ode_hist = odeint(
+            func=self.ode_func,
+            y0=self.observe_flat(),
+            t=t_span,
+            args=(action,),
+            tfirst=True
+        )
 
-        packed_hist = [self.pack_state(_) for _ in ode_hist]
-        next_states = packed_hist[-1]
+        # Update the systems' state
+        y = ode_hist[-1]
+        for system in self.systems:
+            system.state = y[system.flat_index].reshape(system.state_shape)
 
         # Log the inner history of states
         if not self.logging_off:
-            for t, s in zip(t_span[:-1], packed_hist[:-1]):
-                self.logger.record(time=t, state=s, action=action)
+            for t, y in zip(t_span[:-1], ode_hist[:-1]):
+                state_dict = {
+                    name: y[system.flat_index].reshape(system.state_shape)
+                    for name, system in self.systems_dict.items()
+                }
+                self.logger.record(time=t, state=state_dict, action=action)
 
-        return next_states, packed_hist
+        self.clock.tick()
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
         def wrapper(t, y, *args):
-            states = self.pack_state(y)
-            return self.unpack_state(func(t, states, *args))
+            for system in self.systems:
+                system.state = y[system.flat_index].reshape(system.state_shape)
+            self.derivs(t, *args)
+            return np.hstack([system._dot for system in self.systems])
         return wrapper
 
     def derivs(self, t, states, action):
@@ -89,15 +115,10 @@ class BaseEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def pack_state(self, flat_state):
-        packed = dict(
-            zip(self.systems.keys(), pack(flat_state, self.state_index)))
-        return packed
-
     def append_systems(self, systems):
-        self.systems.update(systems)
-        self.state_index = indexing(self.systems)
-        self.observation_space = infer_obs_space(self.systems)
+        self.systems_dict.update(systems)
+        self.indexing()
+        self.observation_space = infer_obs_space(self.systems_dict)
 
     def step(self, action):
         raise NotImplementedError
@@ -105,16 +126,6 @@ class BaseEnv(gym.Env):
     def close(self):
         if not self.logging_off:
             self.logger.close()
-
-    def unpack_state(self, states):
-        if isinstance(states, (list, np.ndarray)):
-            if np.ndim(states) != 1:
-                states = flatten(states)
-
-        elif isinstance(states, dict):
-            states = flatten(states.values())
-
-        return np.hstack(states)
 
     def render(self, mode="tqdm"):
         if mode == "tqdm":
@@ -152,7 +163,11 @@ class BaseSystem:
         raise NotImplementedError("deriv method is not defined in the system.")
 
     def reset(self):
-        return self.initial_state
+        self.state = self.initial_state
+        return self.state
+
+    def set_dot(self, deriv):
+        self._dot = deriv
 
 
 class Clock:
@@ -189,30 +204,8 @@ def pack(flat_state, indices):
             flat_state[tmp:tmp + mult].reshape(index)
         )
         tmp += mult
-    """
-    > timeit: 3.74 micro
-    """
-
-    """
-    div_points = [0] + list(itertools.accumulate(
-        [functools.reduce(lambda a, b: a * b, i) for i in indices],
-    ))
-
-    packed = [
-        flat_state[div_points[i]:div_points[i+1]].reshape(indices[i])
-        for i in range(len(indices))
-    ]
-    """
-    """
-    > timeit: 5.22 micro
-    """
 
     return packed
-
-
-def indexing(systems):
-    index = [system.state_shape for system in systems.values()]
-    return index
 
 
 def deep_flatten(arg):
@@ -222,10 +215,6 @@ def deep_flatten(arg):
         return deep_flatten(arg[0]) + deep_flatten(arg[1:])
     elif isinstance(arg, (np.ndarray, float, int)):
         return [np.asarray(arg).ravel()]
-
-
-def flatten(arglist):
-    return [np.asarray(arg).ravel() for arg in arglist]
 
 
 def infinite_box(shape):
