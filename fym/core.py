@@ -50,6 +50,7 @@ class BaseEnv(gym.Env):
         for system in self.systems:
             size = functools.reduce(lambda a, b: a * b, system.state_shape)
             system.flat_index = slice(start, start + size)
+            start += size
 
     def reset(self):
         for system in self.systems:
