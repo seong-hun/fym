@@ -223,7 +223,7 @@ class Delay:
         return self.clock.get() >= self.T
 
     def set_states(self, time):
-        if time - self.T > self.clock.get() - self.clock.dt:
+        if time > self.memory_dump.x[-1] - self.T:
             fit = self.memory[0]
         else:
             fit = self.memory_dump
