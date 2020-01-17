@@ -68,13 +68,13 @@ class BaseEnv(gym.Env):
             system.state.ravel() for system in self.systems
         ])
 
-    def update(self, action):
+    def update(self, action, *args):
         t_span = self.clock.get() + self.t_span
         ode_hist = odeint(
             func=self.ode_func,
             y0=self.observe_flat(),
             t=t_span,
-            args=(action,),
+            args=(action,) + args,
             tfirst=True
         )
 
@@ -103,16 +103,24 @@ class BaseEnv(gym.Env):
             return np.hstack([system._dot for system in self.systems])
         return wrapper
 
-    def derivs(self, t, states, action):
+    def derivs(self, time, *args):
         """
-        It is recommened to override this method by a user-defined ``derivs``.
+        Overwrite this method with a custom method.
+        Note that ``*args`` are fixed during integration.
+        If you want to time-varying variables,
+        i.e. state feedback control inputs, or time-varying commands,
+        you should use exogeneous methods taking time or states
+        where the states can be obatined by ``self.system.state``.
 
-        Sample:
-        ```python
-        controls = self.pack_action(us, self.control_index)
-        derivs = [system.deriv(t, states, controls) for system in self.systems]
-        return np.hstack(derivs)
-        ```
+        Sample code:
+            ```python
+            def derivs(self, time, action):
+                system = self.main_system
+                state = system.state
+                system.set_dot(
+                    system.A.dot(state) + system.B.dot(action)
+                )
+            ```
         """
         raise NotImplementedError
 
