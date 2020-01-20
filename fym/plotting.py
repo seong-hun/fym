@@ -2,17 +2,18 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict
 
 import fym
-import fym.logging
 
 
 class Plotter:
-    figures = OrderedDict()
+    figures = OrderedDict()  # dictionary for figures
     tmp_name = 0
 
     def plot2d(self, x, y, name=None, xlabel='time (s)', ylabels=['x']):
         if not x.shape[0] == y.shape[0]:
             raise ValueError("The length of x must agree with those of y's.")
         fig, ax = plt.subplots(y.shape[1])
+
+        # plot 2d figure
         for i in range(y.shape[1]):
             ax[i].plot(x, y[:, i])
             if len(ylabels) == 1:
@@ -22,6 +23,8 @@ class Plotter:
             else:
                 raise ValueError("The number of labels must agree with the number of y's.")
             ax[-1].set_xlabel(xlabel)
+
+        # add an element into figures dictionary
         if name is None:
             self.tmp_name += 1
             name = 'tmp{}'.format(self.tmp_name)
@@ -31,9 +34,13 @@ class Plotter:
             raise ValueError("Figure name has to be string or None (defalut value).")
         self.figures[name] = [fig, ax]
 
+    def show(self):
+        plt.show()
+
 
 if __name__ == '__main__':
-    data = fym.logging.load('data/main/result.h5')
+    import fym.logging
+    data = fym.logging.load('data/main/result.h5')  # result obtained from fym.logging
 
 # data consists of three keys: state, action, time
     state = data['state']
