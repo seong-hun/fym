@@ -17,6 +17,10 @@ class BaseEnv(gym.Env):
                  ode_step_len=2, odeint_option={}):
         self.systems_dict = systems_dict
         self.systems = systems_dict.values()
+        self.state_shape = (sum([
+            functools.reduce(lambda a, b: a * b, system.state_shape)
+            for system in self.systems
+        ]),)
         self.indexing()
 
         if not hasattr(self, 'observation_space'):
@@ -37,7 +41,7 @@ class BaseEnv(gym.Env):
                 log_dir=tmp_dir, file_name='history.h5'
             )
 
-        self.ode_func = self.ode_wrapper(self.derivs)
+        self.ode_func = self.ode_wrapper(self.set_dot)
         self.odeint_option = odeint_option
         self.tqdm_bar = None
 
@@ -47,6 +51,41 @@ class BaseEnv(gym.Env):
         self.t_span = np.linspace(0, dt, ode_step_len + 1)
 
         self.delay = None
+
+    def __repr__(self, indent=0):
+        name = self.name or self.__class__.__name__
+        result = [
+            " " * indent + f"<{name}>",
+            " " * indent + f"- state: {self.state}"
+        ]
+        if hasattr(self, "dot"):
+            result.append(" " * indent + f"- dot: {self.dot}")
+        result.append("")
+
+        for system in self.systems:
+            v_str = system.__repr__(indent + 2)
+            result.append(v_str)
+        return "\n".join(result)
+
+    @property
+    def state(self):
+        return self.observe_flat()
+
+    @state.setter
+    def state(self, state):
+        for system in self.systems:
+            system.state = state[system.flat_index].reshape(system.state_shape)
+
+    @property
+    def dot(self):
+        return np.hstack([
+            system.dot.ravel() for system in self.systems
+        ])
+
+    @dot.setter
+    def dot(self, dot):
+        for system in self.systems:
+            system.dot = dot[system.flat_index].reshape(system.state_shape)
 
     def indexing(self):
         start = 0
@@ -59,6 +98,14 @@ class BaseEnv(gym.Env):
         for system in self.systems:
             system.reset()
         self.clock.reset()
+
+    def observe_list(self, state=None):
+        if state is None:
+            return [
+                system.state for system in self.systems
+            ]
+        else:
+            return [state[system.flat_index] for system in self.systems]
 
     def observe_dict(self):
         return {
@@ -105,11 +152,11 @@ class BaseEnv(gym.Env):
         def wrapper(t, y, *args):
             for system in self.systems:
                 system.state = y[system.flat_index].reshape(system.state_shape)
-            self.derivs(t, *args)
-            return np.hstack([system._dot for system in self.systems])
+            self.set_dot(t, *args)
+            return np.hstack([system.dot for system in self.systems])
         return wrapper
 
-    def derivs(self, time, *args):
+    def set_dot(self, time, *args):
         """
         Overwrite this method with a custom method.
         Note that ``*args`` are fixed during integration.
@@ -120,12 +167,10 @@ class BaseEnv(gym.Env):
 
         Sample code:
             ```python
-            def derivs(self, time, action):
+            def set_dot(self, time, action):
                 system = self.main_system
                 state = system.state
-                system.set_dot(
-                    system.A.dot(state) + system.B.dot(action)
-                )
+                system.dot = system.A.dot(state) + system.B.dot(action)
             ```
         """
         raise NotImplementedError
@@ -159,6 +204,7 @@ class BaseEnv(gym.Env):
 class BaseSystem:
     def __init__(self, initial_state):
         self.initial_state = initial_state
+        self.state = self.initial_state
         self.state_shape = self.initial_state.shape
 
     @property
@@ -177,15 +223,20 @@ class BaseSystem:
     def initial_state(self, val):
         self._initial_state = np.atleast_1d(val)
 
+    @property
+    def dot(self):
+        return self._dot
+
+    @dot.setter
+    def dot(self, dot):
+        self._dot = dot
+
     def deriv(self):
         raise NotImplementedError("deriv method is not defined in the system.")
 
     def reset(self):
         self.state = self.initial_state
         return self.state
-
-    def set_dot(self, deriv):
-        self._dot = deriv
 
 
 class Clock:
