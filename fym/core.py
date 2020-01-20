@@ -3,6 +3,7 @@ import functools
 
 import numpy as np
 from scipy.integrate import odeint
+from scipy.interpolate import interp1d
 import tqdm
 
 import gym
@@ -44,6 +45,8 @@ class BaseEnv(gym.Env):
             raise ValueError("ode_step_len should be integer.")
 
         self.t_span = np.linspace(0, dt, ode_step_len + 1)
+
+        self.delay = None
 
     def indexing(self):
         start = 0
@@ -93,6 +96,9 @@ class BaseEnv(gym.Env):
                 self.logger.record(time=t, state=state_dict, action=action)
 
         self.clock.tick()
+
+        if self.delay:
+            self.delay.update(t_span, ode_hist)
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
@@ -146,6 +152,9 @@ class BaseEnv(gym.Env):
 
             self.tqdm_bar.update(1)
 
+    def set_delay(self, systems: list, T):
+        self.delay = Delay(self.clock, systems, T)
+
 
 class BaseSystem:
     def __init__(self, initial_state):
@@ -196,6 +205,41 @@ class Clock:
 
     def time_over(self):
         return self.get() >= self.max_t
+
+
+class Delay:
+    def __init__(self, clock, systems: list, T, fill_value="extrapolate"):
+        if clock.dt > T:
+            raise ValueError("Time step should be smaller than the delay")
+
+        self.clock = clock
+        self.systems = systems
+        self.T = T
+        self.fill_value = fill_value
+
+        self.memory = []
+
+    def available(self):
+        return self.clock.get() >= self.T
+
+    def set_states(self, time):
+        if time > self.memory_dump.x[-1] - self.T:
+            fit = self.memory[0]
+        else:
+            fit = self.memory_dump
+
+        y = fit(time - self.T)
+
+        for system in self.systems:
+            system.d_state = y[system.flat_index].reshape(system.state_shape)
+
+    def update(self, t_hist, state_hist):
+        self.memory.append(
+            interp1d(t_hist, state_hist, axis=0, fill_value=self.fill_value)
+        )
+
+        if self.clock.get() >= self.T:
+            self.memory_dump = self.memory.pop(0)
 
 
 def pack(flat_state, indices):
