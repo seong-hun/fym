@@ -12,9 +12,11 @@ import fym.logging as logging
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems_dict, dt, max_t,
+    def __init__(self, systems_dict, dt=0.01, max_t=1,
                  tmp_dir='data/tmp', logging_off=True,
-                 ode_step_len=2, odeint_option={}):
+                 ode_step_len=2, odeint_option={},
+                 name=None):
+        self.name = name
         self.systems_dict = systems_dict
         self.systems = systems_dict.values()
         self.state_shape = (sum([
@@ -202,18 +204,22 @@ class BaseEnv(gym.Env):
 
 
 class BaseSystem:
-    def __init__(self, initial_state):
+    def __init__(self, initial_state, name=None):
         self.initial_state = initial_state
         self.state = self.initial_state
         self.state_shape = self.initial_state.shape
+        self.name = name
 
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name
+    def __repr__(self, indent=0):
+        name = self.name or self.__class__.__name__
+        result = [
+            " " * indent + f"<{name}>",
+            " " * indent + f"state: {self.state}"
+        ]
+        if hasattr(self, "dot"):
+            result.append(" " * indent + f"dot: {self.dot}")
+        result.append("")
+        return "\n".join(result)
 
     @property
     def initial_state(self):
