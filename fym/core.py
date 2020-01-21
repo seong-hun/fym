@@ -237,9 +237,6 @@ class BaseSystem:
     def dot(self, dot):
         self._dot = dot
 
-    def deriv(self):
-        raise NotImplementedError("deriv method is not defined in the system.")
-
     def reset(self):
         self.state = self.initial_state
         return self.state
