@@ -1,3 +1,5 @@
+import numpy as np
+
 import fym
 import fym.plotting as plotting
 import fym.logging
@@ -13,6 +15,9 @@ ctrl = data['control']
 time = data['time']
 
 plotter = plotting.Plotter()
+x = np.linspace(0.0, 1.0, num=100)
+y = x
+plotter.plot2d(x, y)  # tmp
 plotter.plot2d(time, state)  # tmp
 plotter.plot2d(time, state, name='state')
 plotter.plot2d(time, ctrl, name='ctrl', xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'])

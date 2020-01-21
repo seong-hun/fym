@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 
@@ -11,13 +12,20 @@ class Plotter:
     def plot2d(self, x, y, name=None, xlabel='time (s)', ylabels=['x']):
         if not x.shape[0] == y.shape[0]:
             raise ValueError("The length of x must agree with those of y's.")
+        if len(y.shape) == 1:
+            y = np.expand_dims(x, axis=1)
         fig, ax = plt.subplots(y.shape[1])
+        if y.shape[1] == 1:
+            ax = [ax]
 
         # plot 2d figure
         for i in range(y.shape[1]):
             ax[i].plot(x, y[:, i])
             if len(ylabels) == 1:
-                ax[i].set_ylabel(ylabels[0]+'{}'.format(i+1))
+                if y.shape[1] == 1:
+                    ax[i].set_ylabel(ylabels[0])
+                else:
+                    ax[i].set_ylabel(ylabels[0]+'{}'.format(i+1))
             elif len(ylabels) == y.shape[1]:
                 ax[i].set_ylabel(ylabels[i])
             else:
@@ -51,7 +59,3 @@ if __name__ == '__main__':
 
     plotter = Plotter()
     plotter.plot2d(time, state)  # tmp
-    plotter.plot2d(time, state, name='state')
-    plotter.plot2d(time, ctrl, name='ctrl', xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'])
-
-    plt.show()
