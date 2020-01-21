@@ -97,8 +97,8 @@ class F16LinearLateral(BaseSystem):
     def __init__(self, initial_state=[1, 0, 0, 0, 0, 0, 0]):
         super().__init__(initial_state)
 
-    def deriv(self, x, u):
-        return self.A.dot(x) + self.B.dot(u)
+    def set_dot(self, x, u):
+        self.dot = self.A.dot(x) + self.B.dot(u)
 
 
 class MorphingPlane(BaseEnv):
