@@ -10,6 +10,21 @@ class Plotter:
     figures = OrderedDict()  # dictionary for figures
     tmp_name = 0
 
+    def __init__(self, plot_type="plot"):
+        self.plot_type = plot_type
+
+    def set_plot_type(self, plot_type):
+        self.plot_type = plot_type
+
+    def plot(self, ax, *args):
+        if self.plot_type == "plot":
+            result = ax.plot(*args)
+        elif self.plot_type == "step":
+            result = ax.step(*args)
+        else:
+            raise ValueError("{} is not a supported plot type.".format(self.plot_type))
+        return result
+
     def plot2d(self, x, y, name=None, xlabel='time (s)', ylabels=['x'], ncols=1):
         if not x.shape[0] == y.shape[0]:
             raise ValueError("The length of x must agree with those of y's.")
@@ -31,7 +46,8 @@ class Plotter:
                     break
                 else:
                     nplt += 1
-                    ax[i, j].plot(x, y[:, i])
+                    self.plot(ax[i, j], x, y[:, i])
+                    # ax[i, j].plot(x, y[:, i])
                     if len(ylabels) == 1:
                         if y.shape[1] == 1:
                             ax[i, j].set_ylabel(ylabels[0])

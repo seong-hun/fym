@@ -21,5 +21,7 @@ plotter.plot2d(x, y)  # tmp
 plotter.plot2d(time, state)  # tmp
 plotter.plot2d(time, state, name='state', ncols=3)
 plotter.plot2d(time, ctrl, name='ctrl', xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'])
+plotter.set_plot_type("step")
+plotter.plot2d(time, ctrl, name='ctrl', xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'])
 
 plotter.show()
