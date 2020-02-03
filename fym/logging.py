@@ -4,11 +4,11 @@ import os
 from datetime import datetime
 
 
-def save(h5file, dic):
+def save(h5file, dic, mode="w"):
     if not isinstance(h5file, h5py.File):
         if not os.path.exists(os.path.dirname(h5file)):
             os.makedirs(os.path.dirname(h5file), exist_ok=True)
-        with h5py.File(h5file, 'w') as h5file:
+        with h5py.File(h5file, mode) as h5file:
             _rec_save(h5file, '/', dic)
     else:
         _rec_save(h5file, '/', dic)
@@ -64,7 +64,8 @@ def _rec_update(base_dict, input_dict):
 
 
 class Logger:
-    def __init__(self, log_dir=None, file_name='data.h5', max_len=1e2):
+    def __init__(self, log_dir=None, file_name='data.h5', max_len=1e2,
+                 mode="w"):
         if log_dir is None:
             log_dir = os.path.join(
                 'log',
@@ -75,7 +76,7 @@ class Logger:
         self.basename = file_name
         self.path = os.path.join(log_dir, file_name)
         self.max_len = max_len
-        self.h5file = h5py.File(self.path, 'w')
+        self.h5file = h5py.File(self.path, mode)
         self.clear()
 
     def clear(self):

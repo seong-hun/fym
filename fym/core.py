@@ -54,18 +54,21 @@ class BaseEnv(gym.Env):
 
         self.delay = None
 
-    def __repr__(self, indent=0):
+    def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
+        base = base + [name]
         result = [
-            " " * indent + f"<{name}>",
-            " " * indent + f"- state: {self.state}"
+            f"<{' - '.join(base)}>",
+            "state:",
+            f"{self.state}"
         ]
         if hasattr(self, "dot"):
-            result.append(" " * indent + f"- dot: {self.dot}")
+            result.append("dot:"
+                          f"{self.dot}")
         result.append("")
 
         for system in self.systems:
-            v_str = system.__repr__(indent + 2)
+            v_str = system.__repr__(base=base)
             result.append(v_str)
         return "\n".join(result)
 
@@ -127,7 +130,8 @@ class BaseEnv(gym.Env):
             y0=self.observe_flat(),
             t=t_span,
             args=(action,) + args,
-            tfirst=True
+            tfirst=True,
+            **self.odeint_option
         )
 
         # Update the systems' state
@@ -155,7 +159,7 @@ class BaseEnv(gym.Env):
             for system in self.systems:
                 system.state = y[system.flat_index].reshape(system.state_shape)
             self.set_dot(t, *args)
-            return np.hstack([system.dot for system in self.systems])
+            return self.dot
         return wrapper
 
     def set_dot(self, time, *args):
@@ -191,7 +195,7 @@ class BaseEnv(gym.Env):
 
     def render(self, mode="tqdm"):
         if mode == "tqdm":
-            if self.tqdm_bar is None:
+            if self.tqdm_bar is None or self.clock.get() == 0:
                 self.tqdm_bar = tqdm.tqdm(
                     total=self.clock.max_len,
                     desc="Time"
@@ -210,16 +214,27 @@ class BaseSystem:
         self.state_shape = self.initial_state.shape
         self.name = name
 
-    def __repr__(self, indent=0):
+    def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
+        base = base + [name]
         result = [
-            " " * indent + f"<{name}>",
-            " " * indent + f"state: {self.state}"
+            f"<{' - '.join(base)}>",
+            "state:",
+            f"{self.state}"
         ]
         if hasattr(self, "dot"):
-            result.append(" " * indent + f"dot: {self.dot}")
+            result.append("dot:"
+                          f"{self.dot}")
         result.append("")
         return "\n".join(result)
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        self._state = state
 
     @property
     def initial_state(self):
