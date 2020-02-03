@@ -352,25 +352,24 @@ class MorphingLon(BaseSystem, MorphingPlane):
     def _trim_cost(self, z, fixed):
         x, u = self._trim_convert(z, fixed)
         dxs = self.deriv(x, u)
-        weight = np.diag([1, 1, 100, 1])
+        weight = np.diag([1, 1, 1000, 1])
         return dxs.dot(weight).dot(dxs)
 
     def _trim_convert(self, z, fixed):
-        _, (eta1, eta2) = fixed
-        V, alpha, delt, dele = z
+        V, _, (eta1, eta2) = fixed
+        alpha, delt, dele = z
         q, gamma = 0, 0
 
         x = np.array([V, alpha, q, gamma])
         u = np.array([delt, dele, eta1, eta2])
         return x, u
 
-    def get_trim(self, z0={"V": 16, "alpha": 0.1, "delt": 0.13, "dele": 0},
-                 fixed={"h": 300, "eta": (0.0, 0.0)},
+    def get_trim(self, z0={"alpha": 0.1, "delt": 0.13, "dele": 0},
+                 fixed={"V": 20, "h": 300, "eta": (0.5, 0.5)},
                  method="SLSQP", options={"disp": False, "ftol": 1e-10}):
         z0 = list(z0.values())
         fixed = list(fixed.values())
         bounds = (
-            (10, 30),
             (self.coords["alpha"].min(), self.coords["alpha"].max()),
             self.control_limits["delt"],
             self.control_limits["dele"]
