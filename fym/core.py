@@ -194,7 +194,7 @@ class BaseEnv(gym.Env):
 
     def render(self, mode="tqdm"):
         if mode == "tqdm":
-            if self.tqdm_bar is None:
+            if self.tqdm_bar is None or self.clock.get() == 0:
                 self.tqdm_bar = tqdm.tqdm(
                     total=self.clock.max_len,
                     desc="Time"
