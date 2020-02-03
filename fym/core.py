@@ -54,18 +54,21 @@ class BaseEnv(gym.Env):
 
         self.delay = None
 
-    def __repr__(self, indent=0):
+    def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
+        base = base + [name]
         result = [
-            " " * indent + f"<{name}>",
-            " " * indent + f"- state: {self.state}"
+            f"<{' - '.join(base)}>",
+            "state:",
+            f"{self.state}"
         ]
         if hasattr(self, "dot"):
-            result.append(" " * indent + f"- dot: {self.dot}")
+            result.append("dot:"
+                          f"{self.dot}")
         result.append("")
 
         for system in self.systems:
-            v_str = system.__repr__(indent + 2)
+            v_str = system.__repr__(base=base)
             result.append(v_str)
         return "\n".join(result)
 
@@ -210,16 +213,27 @@ class BaseSystem:
         self.state_shape = self.initial_state.shape
         self.name = name
 
-    def __repr__(self, indent=0):
+    def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
+        base = base + [name]
         result = [
-            " " * indent + f"<{name}>",
-            " " * indent + f"state: {self.state}"
+            f"<{' - '.join(base)}>",
+            "state:",
+            f"{self.state}"
         ]
         if hasattr(self, "dot"):
-            result.append(" " * indent + f"dot: {self.dot}")
+            result.append("dot:"
+                          f"{self.dot}")
         result.append("")
         return "\n".join(result)
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        self._state = state
 
     @property
     def initial_state(self):
