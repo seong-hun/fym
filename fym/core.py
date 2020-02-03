@@ -201,12 +201,12 @@ class BaseEnv(gym.Env):
         if self.tqdm_bar is not None:
             self.tqdm_bar.close()
 
-    def render(self, mode="tqdm", desc=None, leave=True):
+    def render(self, mode="tqdm", desc=None, **kwargs):
         if mode == "tqdm":
             if self.tqdm_bar is None or self.clock.get() == 0:
                 self.tqdm_bar = tqdm.tqdm(
                     total=self.clock.max_len,
-                    leave=leave,
+                    **kwargs
                 )
 
             self.tqdm_bar.update(1)
