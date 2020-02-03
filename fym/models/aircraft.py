@@ -115,6 +115,8 @@ class MorphingPlane(BaseEnv):
         "dele": np.deg2rad((-10, 10)),
         "dela": (-0.5, 0.5),
         "delr": (-0.5, 0.5),
+        "eta1": (0, 1),
+        "eta2": (0, 1),
     }
 
     coords = {
@@ -238,7 +240,7 @@ class MorphingPlane(BaseEnv):
         x_cg, z_cg = 0, 0
 
         VT, alp, bet = self.state_readable(v=v, preset="vel")
-        qbar = 0.5 * rho(-p[2]) * VT**2
+        qbar = 0.5 * get_rho(-p[2]) * VT**2
 
         CL, CD, Cm, CC, Cl, Cn = self.aerocoeff(*eta, dele, alp)
 
@@ -275,8 +277,9 @@ class MorphingPlane(BaseEnv):
 
         return F, M
 
-    def get_trim(self, z0={"alpha": 0, "delt": 0, "dele": 0},
-                 fixed={"h": 300, "VT": 16, "eta": (0, 0)}):
+    def get_trim(self, z0={"alpha": 0.1, "delt": 0.13, "dele": 0},
+                 fixed={"h": 300, "VT": 16, "eta": (0, 0)},
+                 method="SLSQP", options={"disp": True, "ftol": 1e-10}):
         z0 = list(z0.values())
         fixed = list(fixed.values())
         bounds = (
@@ -286,11 +289,9 @@ class MorphingPlane(BaseEnv):
         )
         result = scipy.optimize.minimize(
             self._trim_cost, z0, args=(fixed,),
-            bounds=bounds, method='SLSQP', options={'disp': True})
+            bounds=bounds, method=method, options=options)
 
-        x_trim, u_trim, eta_trim = self._trim_convert(result.x, fixed)
-
-        return x_trim, u_trim, eta_trim
+        return self._trim_convert(result.x, fixed)
 
     def _trim_cost(self, z, fixed):
         x, u, eta = self._trim_convert(z, fixed)
@@ -298,7 +299,7 @@ class MorphingPlane(BaseEnv):
         self.set_dot(x, u, eta)
         weight = np.diag([1, 1, 1000])
 
-        dxs = np.append(self.vel.dot[(0,2),], self.omega.dot[1])
+        dxs = np.append(self.vel.dot[(0, 2), ], self.omega.dot[1])
         return dxs.dot(weight).dot(dxs)
 
     def _trim_convert(self, z, fixed):
@@ -315,7 +316,74 @@ class MorphingPlane(BaseEnv):
         return x, u, eta
 
 
-def rho(altitude):
+def get_rho(altitude):
     pressure = 101325 * (1 - 2.25569e-5 * altitude)**5.25616
     temperature = 288.14 - 0.00649 * altitude
     return pressure / (287*temperature)
+
+
+class MorphingLon(BaseSystem, MorphingPlane):
+    rho = get_rho(300)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def deriv(self, x, u):
+        V, alpha, q, gamma = x
+        delt, dele, eta1, eta2 = u
+
+        S, cbar, Tmax = self.S, self.cbar, self.Tmax
+        m, g = self.mass, self.g
+
+        qbar = self.rho * V**2 / 2
+        T = Tmax * delt
+        L = qbar * S * self.CL(eta1, eta2, dele, alpha)
+        D = qbar * S * self.CD(eta1, eta2, dele, alpha)
+        M = qbar * cbar * S * self.Cm(eta1, eta2, dele, alpha)
+        Iy = self.J_yy(eta1, eta2)
+
+        dV = 1 / m * (-D + T * cos(alpha) - m * g * sin(gamma))
+        dalpha = q - 1 / (m * V) * (L + T * sin(alpha) - m * g * cos(gamma))
+        dq = M / Iy
+        dgamma = 1 / (m * V) * (L + T * sin(alpha) - m * g * cos(gamma))
+
+        return np.hstack((dV, dalpha, dq, dgamma))
+
+    def _trim_cost(self, z, fixed):
+        x, u = self._trim_convert(z, fixed)
+        dxs = self.deriv(x, u)
+        weight = np.diag([1, 1, 100, 1])
+        return dxs.dot(weight).dot(dxs)
+
+    def _trim_convert(self, z, fixed):
+        _, (eta1, eta2) = fixed
+        V, alpha, delt, dele = z
+        q, gamma = 0, 0
+
+        x = np.array([V, alpha, q, gamma])
+        u = np.array([delt, dele, eta1, eta2])
+        return x, u
+
+    def get_trim(self, z0={"V": 16, "alpha": 0.1, "delt": 0.13, "dele": 0},
+                 fixed={"h": 300, "eta": (0.0, 0.0)},
+                 method="SLSQP", options={"disp": False, "ftol": 1e-10}):
+        z0 = list(z0.values())
+        fixed = list(fixed.values())
+        bounds = (
+            (10, 30),
+            (self.coords["alpha"].min(), self.coords["alpha"].max()),
+            self.control_limits["delt"],
+            self.control_limits["dele"]
+        )
+        result = scipy.optimize.minimize(
+            self._trim_cost, z0, args=(fixed,),
+            bounds=bounds, method=method, options=options)
+
+        return self._trim_convert(result.x, fixed)
+
+    def saturation(self, u):
+        limits = np.vstack([
+            self.control_limits[k]
+            for k in ("delt", "dele", "eta1", "eta2")
+        ])
+        return np.clip(u, *limits.T)
