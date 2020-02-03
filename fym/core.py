@@ -130,7 +130,8 @@ class BaseEnv(gym.Env):
             y0=self.observe_flat(),
             t=t_span,
             args=(action,) + args,
-            tfirst=True
+            tfirst=True,
+            **self.odeint_option
         )
 
         # Update the systems' state
@@ -158,7 +159,7 @@ class BaseEnv(gym.Env):
             for system in self.systems:
                 system.state = y[system.flat_index].reshape(system.state_shape)
             self.set_dot(t, *args)
-            return np.hstack([system.dot for system in self.systems])
+            return self.dot
         return wrapper
 
     def set_dot(self, time, *args):
