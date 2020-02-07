@@ -64,17 +64,19 @@ def _rec_update(base_dict, input_dict):
 
 
 class Logger:
-    def __init__(self, log_dir=None, file_name='data.h5', max_len=1e2,
-                 mode="w"):
-        if log_dir is None:
-            log_dir = os.path.join(
-                'log',
-                datetime.today().strftime('%Y%m%d-%H%M%S')
-            )
+    def __init__(self, path=None, log_dir=None, file_name='data.h5',
+                 max_len=1e2, mode="w"):
+        if path is not None:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        else:
+            if log_dir is None:
+                log_dir = os.path.join(
+                    'log', datetime.today().strftime('%Y%m%d-%H%M%S'))
+            os.makedirs(log_dir, exist_ok=True)
+            path = os.path.join(log_dir, file_name)
 
-        os.makedirs(log_dir, exist_ok=True)
+        self.path = path
         self.basename = file_name
-        self.path = os.path.join(log_dir, file_name)
         self.max_len = max_len
         self.h5file = h5py.File(self.path, mode)
         self.clear()
