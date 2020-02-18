@@ -65,7 +65,7 @@ def _rec_update(base_dict, input_dict, is_info=False):
     """Recursively update ``base_dict`` with ``input_dict``."""
     for key, val in input_dict.items():
         if isinstance(val, dict):
-            _rec_update(base_dict.setdefault(key, {}), val)
+            _rec_update(base_dict.setdefault(key, {}), val, is_info)
         else:
             if is_info:
                 base_dict.update({key: val})
