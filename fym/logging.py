@@ -1,3 +1,4 @@
+import json
 import h5py
 import numpy as np
 import os
@@ -6,10 +7,14 @@ from datetime import datetime
 
 def save(h5file, dic, mode="w"):
     if not isinstance(h5file, h5py.File):
-        if not os.path.exists(os.path.dirname(h5file)):
-            os.makedirs(os.path.dirname(h5file), exist_ok=True)
-        with h5py.File(h5file, mode) as h5file:
-            _rec_save(h5file, '/', dic)
+        if isinstance(h5file, str):
+            dirname = os.path.dirname(h5file)
+            if dirname:
+                os.makedirs(dirname, exist_ok=True)
+            with h5py.File(h5file, mode) as h5file:
+                _rec_save(h5file, '/', dic)
+        else:
+            raise ValueError(f'Cannot save into {type(h5file)} type')
     else:
         _rec_save(h5file, '/', dic)
 
@@ -37,9 +42,13 @@ def _rec_save(h5file, path, dic):
             raise ValueError(f'Cannot save {type(val)} type')
 
 
-def load(path):
+def load(path, with_info=False):
     with h5py.File(path, 'r') as h5file:
-        return _rec_load(h5file, '/')
+        ans = _rec_load(h5file, '/')
+        if with_info:
+            return ans, json.loads(h5file.attrs["info"])
+        else:
+            return ans
 
 
 def _rec_load(h5file, path):
@@ -52,22 +61,28 @@ def _rec_load(h5file, path):
     return ans
 
 
-def _rec_update(base_dict, input_dict):
+def _rec_update(base_dict, input_dict, is_info=False):
     """Recursively update ``base_dict`` with ``input_dict``."""
     for key, val in input_dict.items():
         if isinstance(val, dict):
             _rec_update(base_dict.setdefault(key, {}), val)
-        elif not isinstance(val, str):
-            base_dict.setdefault(key, []).append(val)
         else:
-            raise ValueError("Unsupported data type")
+            if is_info:
+                base_dict.update({key: val})
+            else:
+                if not isinstance(val, str):
+                    base_dict.setdefault(key, []).append(val)
+                else:
+                    raise ValueError("Unsupported data type")
 
 
 class Logger:
     def __init__(self, path=None, log_dir=None, file_name='data.h5',
                  max_len=1e2, mode="w"):
         if path is not None:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+            dirname = os.path.dirname(path)
+            if dirname:
+                os.makedirs(dirname, exist_ok=True)
         else:
             if log_dir is None:
                 log_dir = os.path.join(
@@ -79,6 +94,8 @@ class Logger:
         self.basename = file_name
         self.max_len = max_len
         self.h5file = h5py.File(self.path, mode)
+        self.info = {}
+
         self.clear()
 
     def clear(self):
@@ -99,7 +116,12 @@ class Logger:
 
     def close(self):
         self.flush()
+        ser = json.dumps(self.info)
+        self.h5file.attrs.update(info=ser)
         self.h5file.close()
+
+    def set_info(self, **kwargs):
+        _rec_update(self.info, kwargs, is_info=True)
 
 
 if __name__ == '__main__':
