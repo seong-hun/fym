@@ -198,16 +198,20 @@ class BaseEnv(gym.Env):
     def close(self):
         if not self.logging_off:
             self.logger.close()
+        if self.tqdm_bar is not None:
+            self.tqdm_bar.close()
 
-    def render(self, mode="tqdm"):
+    def render(self, mode="tqdm", desc=None, **kwargs):
         if mode == "tqdm":
             if self.tqdm_bar is None or self.clock.get() == 0:
                 self.tqdm_bar = tqdm.tqdm(
                     total=self.clock.max_len,
-                    desc="Time"
+                    **kwargs
                 )
 
             self.tqdm_bar.update(1)
+            if desc:
+                self.tqdm_bar.set_description(desc)
 
     def set_delay(self, systems: list, T):
         self.delay = Delay(self.clock, systems, T)
