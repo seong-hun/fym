@@ -1,4 +1,4 @@
-import json
+import pickle
 import h5py
 import numpy as np
 import os
@@ -46,7 +46,7 @@ def load(path, with_info=False):
     with h5py.File(path, 'r') as h5file:
         ans = _rec_load(h5file, '/')
         if with_info:
-            return ans, json.loads(h5file.attrs["info"])
+            return ans, pickle.loads(h5file.attrs["info"].tostring())
         else:
             return ans
 
@@ -116,8 +116,8 @@ class Logger:
 
     def close(self):
         self.flush()
-        ser = json.dumps(self.info)
-        self.h5file.attrs.update(info=ser)
+        ser = pickle.dumps(self.info)
+        self.h5file.attrs.update(info=np.void(ser))
         self.h5file.close()
 
     def set_info(self, **kwargs):
