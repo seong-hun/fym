@@ -1,27 +1,44 @@
 import numpy as np
 
-import fym
+import fym.logging as logging
 import fym.plotting as plotting
-import fym.logging
 
 
-data = fym.logging.load('data/plot_figures/result.h5')  # a simulation result obtained from fym
+# compatibility check for fym.logging
+data = logging.load('data/plot_figures/result.h5')  # tmp
 
-# data consists of three keys: state, action, time
 state = data['state']
-# e.g., system name is "main".
-# Note: state consists of keys corresponding to each systems.
-ctrl = data['control']
+control = data['control']
 time = data['time']
 
+# auxiliary
+x = np.linspace(0., 100., num=100)
+y = x.reshape(-1, 1)
+z = np.random.rand(100, 2)
+
+# Plotter
 plotter = plotting.Plotter()
-x = np.linspace(0.0, 1.0, num=100)
-y = x
-plotter.plot2d(x, y)  # tmp
-plotter.plot2d(time, state)  # tmp
-plotter.plot2d(time, state, name='state', ncols=3)
-plotter.plot2d(time, ctrl, name='ctrl', xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'])
-plotter.set_plot_type("step")
-plotter.plot2d(time, ctrl, name='ctrl', xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'])
+# plot (2d)
+plotter.plot(x, y)  # tmp
+plotter.plot(
+    time, state,
+    name="state", ncols=3
+)
+plotter.plot(
+    time, control,
+    name="control",
+    xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'],
+)
+
+# step
+plotter.plot(
+    time, control,
+    name="control (step)",
+    xlabel='t (s)', ylabels=['$L (g)$', '$\phi (deg)$'],
+    plot_type="step",
+)
+
+# plot (3d)
+plotter.plot(x, y, z)
 
 plotter.show()
