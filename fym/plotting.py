@@ -25,18 +25,6 @@ class Plotter:
             )
         return result
 
-    def set_cols_and_rows(self, num_figures, ncols, dim):
-        nrows = math.ceil(num_figures/ncols)
-        if dim == 2:
-            fig, ax = plt.subplots(nrows, ncols)
-            if nrows == 1:
-                ax = np.expand_dims(ax, axis=0)
-            if ncols == 1:
-                ax = np.expand_dims(ax, axis=1)
-        elif dim == 3:
-            raise ValueError("3d not supported.")
-        return fig, ax, nrows
-
     def fit_shape(self, *args):
         if len(args) == 2:
             x, y = args
@@ -63,6 +51,40 @@ class Plotter:
         if len(args) == 3:
             result = [x, y, z]
         return result
+
+    def _plot2d(self, ncols, xlabel, ylabels, plot_type, *args):
+        # shape check
+        x, y = self.fit_shape(*args)
+
+        # set cols and rows
+        num_figures = y.shape[1]
+        nrows = math.ceil(num_figures/ncols)
+        fig = plt.figure()
+
+        # plot 2d figures
+        nplt = 0
+        for j in range(ncols):
+            for i in range(nrows):
+                if nplt == num_figures:
+                    break
+                else:
+                    nplt += 1
+                    ax = fig.add_subplot(nrows, ncols, nplt)
+                    self._plot_raw(ax, plot_type, x, y[:, i])
+                    if len(ylabels) == 1:
+                        if y.shape[1] == 1:
+                            ax.set_ylabel(ylabels[0])
+                        else:
+                            ax.set_ylabel(ylabels[0]+'{}'.format(nplt))
+                    elif len(ylabels) == y.shape[1]:
+                        ax.set_ylabel(ylabels[i])
+                    else:
+                        raise ValueError(
+                            "The number of labels must agree"
+                            + " with the number of y's."
+                        )
+            ax.set_xlabel(xlabel)
+        return fig, ax
 
     def _plot3d(self, ncols, xlabel, ylabels, zlabels, plot_type, *args):
         # shape check
@@ -112,40 +134,6 @@ class Plotter:
                         )
             ax.set_xlabel(xlabel)
 
-        return fig, ax
-
-    def _plot2d(self, ncols, xlabel, ylabels, plot_type, *args):
-        # shape check
-        x, y = self.fit_shape(*args)
-
-        # set cols and rows
-        num_figures = y.shape[1]
-        fig, ax, nrows = self.set_cols_and_rows(
-            num_figures, ncols, len(args)
-        )
-
-        # plot 2d figures
-        nplt = 0
-        for j in range(ncols):
-            for i in range(nrows):
-                if nplt == num_figures:
-                    break
-                else:
-                    nplt += 1
-                    self._plot_raw(ax[i, j], plot_type, x, y[:, i])
-                    if len(ylabels) == 1:
-                        if y.shape[1] == 1:
-                            ax[i, j].set_ylabel(ylabels[0])
-                        else:
-                            ax[i, j].set_ylabel(ylabels[0]+'{}'.format(nplt))
-                    elif len(ylabels) == y.shape[1]:
-                        ax[i, j].set_ylabel(ylabels[i])
-                    else:
-                        raise ValueError(
-                            "The number of labels must agree"
-                            + " with the number of y's."
-                        )
-            ax[-1][j].set_xlabel(xlabel)
         return fig, ax
 
     def plot(
