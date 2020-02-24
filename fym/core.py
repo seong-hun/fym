@@ -41,7 +41,7 @@ class BaseEnv(gym.Env):
         if not isinstance(ode_step_len, int):
             raise ValueError("ode_step_len should be integer.")
 
-        self.clock = Clock(dt=dt, max_t=max_t)
+        self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
 
         self.logging_off = logging_off
         if not logging_off:
@@ -57,8 +57,6 @@ class BaseEnv(gym.Env):
         self.ode_func = self.ode_wrapper(self.set_dot)
         self.ode_option = ode_option
         self.tqdm_bar = None
-
-        self.t_span = np.linspace(0, dt, ode_step_len + 1)
 
         self.delay = None
 
@@ -130,7 +128,7 @@ class BaseEnv(gym.Env):
         ])
 
     def update(self, *args):
-        t_hist = self.clock.get() + self.t_span
+        t_hist = self.clock.get_thist()
         ode_hist = self.solver(
             func=self.ode_func,
             y0=self.observe_flat(),
@@ -281,10 +279,11 @@ class BaseSystem:
 
 
 class Clock:
-    def __init__(self, dt, max_t=10):
+    def __init__(self, dt, ode_step_len, max_t=10):
         self.dt = dt
         self.max_t = max_t
         self.max_len = int(max_t / dt) + 1
+        self.thist = np.linspace(0, dt, ode_step_len + 1)
 
     def reset(self):
         self.t = 0
@@ -298,8 +297,22 @@ class Clock:
     def get(self):
         return self.t
 
-    def time_over(self):
-        return self.get() >= self.max_t
+    def time_over(self, t=None):
+        if t is None:
+            return self.get() >= self.max_t
+        else:
+            return t >= self.max_t
+
+    def get_thist(self):
+        thist = self.get() + self.thist
+        if self.time_over(thist[-1]):
+            index = np.where(thist > self.max_t)[0]
+            if index.size == 0:
+                return thist
+            else:
+                return thist[:index[0] + 1]
+        else:
+            return thist
 
 
 class Delay:
