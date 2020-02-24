@@ -1,5 +1,6 @@
 import itertools
 import functools
+import os
 
 import numpy as np
 from scipy.integrate import odeint
@@ -13,9 +14,8 @@ import fym.logging as logging
 
 class BaseEnv(gym.Env):
     def __init__(self, systems_dict, dt=0.01, max_t=1,
-                 tmp_dir='data/tmp', logging_off=True,
-                 solver="odeint",
-                 ode_step_len=2, ode_option={},
+                 logging_path=os.path.join("data", "tmp.h5"), logging_off=True,
+                 solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
         self.name = name
         self.systems_dict = systems_dict
@@ -54,9 +54,6 @@ class BaseEnv(gym.Env):
         self.ode_option = ode_option
         self.tqdm_bar = None
 
-        if not isinstance(ode_step_len, int):
-            raise ValueError("ode_step_len should be integer.")
-
         self.t_span = np.linspace(0, dt, ode_step_len + 1)
 
         self.delay = None
@@ -90,9 +87,7 @@ class BaseEnv(gym.Env):
 
     @property
     def dot(self):
-        return np.hstack([
-            system.dot.ravel() for system in self.systems
-        ])
+        return np.hstack([np.ravel(system.dot) for system in self.systems])
 
     @dot.setter
     def dot(self, dot):
@@ -130,13 +125,13 @@ class BaseEnv(gym.Env):
             system.state.ravel() for system in self.systems
         ])
 
-    def update(self, action, *args):
+    def update(self, *args):
         t_span = self.clock.get() + self.t_span
         ode_hist = self.solver(
             func=self.ode_func,
             y0=self.observe_flat(),
             t=t_span,
-            args=(action,) + args,
+            args=args,
             **self.ode_option
         )
 
@@ -164,7 +159,7 @@ class BaseEnv(gym.Env):
         def wrapper(y, t, *args):
             for system in self.systems:
                 system.state = y[system.flat_index].reshape(system.state_shape)
-            self.set_dot(t, *args)
+            func(t, *args)
             return self.dot
         return wrapper
 
@@ -363,63 +358,15 @@ def infer_obs_space(systems):
     return obs_space
 
 
-def rk4(func, y0, t, args):
-    """
-    Integrate 1D or ND system of ODEs using 4-th order Runge-Kutta.
-    This is a toy implementation which may be useful if you find
-    yourself stranded on a system w/o scipy.  Otherwise use
-    :func:`scipy.integrate`.
-    *y0*
-        initial state vector
-    *t*
-        sample times
-    *func*
-        returns the derivative of the system and has the
-        signature ``dy = func(yi, ti)``
-    *args*
-        additional arguments passed to the derivative function
-    *kwargs*
-        additional keyword arguments passed to the derivative function
-    Example 1 ::
-        ## 2D system
-        def derivs6(x,t):
-            d1 =  x[0] + 2*x[1]
-            d2 =  -3*x[0] + 4*x[1]
-            return (d1, d2)
-        dt = 0.0005
-        t = arange(0.0, 2.0, dt)
-        y0 = (1,2)
-        yout = rk4(derivs6, y0, t)
-    Example 2::
-        ## 1D system
-        alpha = 2
-        def func(x,t):
-            return -alpha*x + exp(-t)
-        y0 = 1
-        yout = rk4(func, y0, t)
-    If you have access to scipy, you should probably be using the
-    scipy.integrate tools rather than this function.
-    """
-
-    try:
-        Ny = len(y0)
-    except TypeError:
-        yout = np.zeros((len(t),), np.float_)
-    else:
-        yout = np.zeros((len(t), Ny), np.float_)
-
-    yout[0] = y0
-
-    for i in np.arange(len(t) - 1):
-
-        thist = t[i]
-        dt = t[i + 1] - thist
-        dt2 = dt / 2.0
-        y0 = yout[i]
-
-        k1 = np.asarray(func(y0, thist, *args))
-        k2 = np.asarray(func(y0 + dt2 * k1, thist + dt2, *args))
-        k3 = np.asarray(func(y0 + dt2 * k2, thist + dt2, *args))
-        k4 = np.asarray(func(y0 + dt * k3, thist + dt, *args))
-        yout[i + 1] = y0 + dt / 6.0 * (k1 + 2 * k2 + 2 * k3 + k4)
-    return yout
+def rk4(func, y0, t, args=()):
+    n = len(t)
+    y = np.zeros((n, len(y0)))
+    y[0] = y0
+    for i in range(n - 1):
+        h = t[i+1] - t[i]
+        k1 = func(y[i], t[i], *args)
+        k2 = func(y[i] + k1 * h / 2., t[i] + h / 2., *args)
+        k3 = func(y[i] + k2 * h / 2., t[i] + h / 2., *args)
+        k4 = func(y[i] + k3 * h, t[i] + h, *args)
+        y[i+1] = y[i] + (h / 6.) * (k1 + 2*k2 + 2*k3 + k4)
+    return y
