@@ -5,6 +5,68 @@ import os
 from datetime import datetime
 
 
+class Logger:
+    def __init__(self, path=None, log_dir=None, file_name="data.h5",
+                 max_len=1e2, mode="w"):
+        if path is None:
+            if log_dir is None:
+                log_dir = os.path.join(
+                    'log', datetime.today().strftime('%Y%m%d-%H%M%S'))
+            os.makedirs(log_dir, exist_ok=True)
+            path = os.path.join(log_dir, file_name)
+
+        self.h5file = None
+        self.mode = mode
+        self.path = path
+        self.max_len = max_len
+        self.info = {}
+
+        self.clear()
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, path):
+        if isinstance(self.h5file, h5py.File):
+            self.h5file.close()
+            os.remove(self._path)
+
+        if path is not None:
+            dirname = os.path.dirname(path)
+            if dirname:
+                os.makedirs(dirname, exist_ok=True)
+
+        self._path = path
+        self.h5file = h5py.File(path, self.mode)
+
+    def clear(self):
+        self.buffer = {}
+        self.len = 0
+
+    def record(self, **kwargs):
+        """Record a dictionary or a numeric data preserving the structure."""
+        _rec_update(self.buffer, kwargs)
+        self.len += 1
+
+        if self.len >= self.max_len:
+            self.flush()
+
+    def flush(self):
+        save(self.h5file, self.buffer)
+        self.clear()
+
+    def close(self):
+        self.flush()
+        ser = pickle.dumps(self.info)
+        self.h5file.attrs.update(info=np.void(ser))
+        self.h5file.close()
+
+    def set_info(self, **kwargs):
+        _rec_update(self.info, kwargs, is_info=True)
+
+
 def save(h5file, dic, mode="w"):
     if not isinstance(h5file, h5py.File):
         if isinstance(h5file, str):
@@ -74,54 +136,6 @@ def _rec_update(base_dict, input_dict, is_info=False):
                     base_dict.setdefault(key, []).append(val)
                 else:
                     raise ValueError("Unsupported data type")
-
-
-class Logger:
-    def __init__(self, path=None, log_dir=None, file_name='data.h5',
-                 max_len=1e2, mode="w"):
-        if path is not None:
-            dirname = os.path.dirname(path)
-            if dirname:
-                os.makedirs(dirname, exist_ok=True)
-        else:
-            if log_dir is None:
-                log_dir = os.path.join(
-                    'log', datetime.today().strftime('%Y%m%d-%H%M%S'))
-            os.makedirs(log_dir, exist_ok=True)
-            path = os.path.join(log_dir, file_name)
-
-        self.path = path
-        self.basename = file_name
-        self.max_len = max_len
-        self.h5file = h5py.File(self.path, mode)
-        self.info = {}
-
-        self.clear()
-
-    def clear(self):
-        self.buffer = {}
-        self.len = 0
-
-    def record(self, **kwargs):
-        """Record a dictionary or a numeric data preserving the structure."""
-        _rec_update(self.buffer, kwargs)
-        self.len += 1
-
-        if self.len >= self.max_len:
-            self.flush()
-
-    def flush(self):
-        save(self.h5file, self.buffer)
-        self.clear()
-
-    def close(self):
-        self.flush()
-        ser = pickle.dumps(self.info)
-        self.h5file.attrs.update(info=np.void(ser))
-        self.h5file.close()
-
-    def set_info(self, **kwargs):
-        _rec_update(self.info, kwargs, is_info=True)
 
 
 if __name__ == '__main__':

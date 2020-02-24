@@ -327,6 +327,10 @@ class MorphingLon(BaseSystem, MorphingPlane):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.limits = np.vstack([
+            self.control_limits[k]
+            for k in ("delt", "dele", "eta1", "eta2")
+        ]).T
 
     def deriv(self, x, u):
         V, alpha, q, gamma = x
@@ -381,8 +385,4 @@ class MorphingLon(BaseSystem, MorphingPlane):
         return self._trim_convert(result.x, fixed)
 
     def saturation(self, u):
-        limits = np.vstack([
-            self.control_limits[k]
-            for k in ("delt", "dele", "eta1", "eta2")
-        ])
-        return np.clip(u, *limits.T)
+        return np.clip(u, *self.limits)
