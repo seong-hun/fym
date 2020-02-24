@@ -13,8 +13,9 @@ import fym.logging as logging
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems_dict, dt=0.01, max_t=1,
+    def __init__(self, systems_dict, dt=0.01, max_t=1, eager_stop=None,
                  logging_path=os.path.join("data", "tmp.h5"), logging_off=True,
+                 logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
         self.name = name
@@ -25,6 +26,7 @@ class BaseEnv(gym.Env):
             for system in self.systems
         ]),)
         self.indexing()
+        self.eager_stop = eager_stop
 
         if not hasattr(self, 'observation_space'):
             self.observation_space = infer_obs_space(systems_dict)
@@ -36,13 +38,15 @@ class BaseEnv(gym.Env):
         if not hasattr(self, 'action_space'):
             raise NotImplementedError('The action_space is not defined.')
 
+        if not isinstance(ode_step_len, int):
+            raise ValueError("ode_step_len should be integer.")
+
         self.clock = Clock(dt=dt, max_t=max_t)
 
         self.logging_off = logging_off
         if not logging_off:
-            self.logger = logging.Logger(
-                log_dir=tmp_dir, file_name='history.h5'
-            )
+            self.logger = logging.Logger(path=logging_path)
+            self.logger_callback = logger_callback
 
         # ODE Solver
         if solver == "odeint":
@@ -126,33 +130,47 @@ class BaseEnv(gym.Env):
         ])
 
     def update(self, *args):
-        t_span = self.clock.get() + self.t_span
+        t_hist = self.clock.get() + self.t_span
         ode_hist = self.solver(
             func=self.ode_func,
             y0=self.observe_flat(),
-            t=t_span,
+            t=t_hist,
             args=args,
             **self.ode_option
         )
 
+        done = False
+        if self.eager_stop:
+            t_hist, ode_hist, done = self.eager_stop(t_hist, ode_hist)
+
+        t, y = t_hist[-1], ode_hist[-1]
         # Update the systems' state
-        y = ode_hist[-1]
         for system in self.systems:
             system.state = y[system.flat_index].reshape(system.state_shape)
 
         # Log the inner history of states
         if not self.logging_off:
-            for t, y in zip(t_span[:-1], ode_hist[:-1]):
-                state_dict = {
-                    name: y[system.flat_index].reshape(system.state_shape)
-                    for name, system in self.systems_dict.items()
-                }
-                self.logger.record(time=t, state=state_dict, action=action)
+            if self.logger_callback is None:
+                for t, y in zip(t_hist[:-1], ode_hist[:-1]):
+                    state_dict = {
+                        name: y[system.flat_index].reshape(system.state_shape)
+                        for name, system in self.systems_dict.items()
+                    }
+                    if args:
+                        self.logger.record(time=t, state=state_dict, args=args)
+                    else:
+                        self.logger.record(time=t, state=state_dict)
+            else:
+                for i, (t, y) in enumerate(zip(t_hist[:-1], ode_hist[:-1])):
+                    self.logger.record(
+                        **self.logger_callback(i, t, y, t_hist, ode_hist))
 
-        self.clock.tick()
+        self.clock.set(t)
 
         if self.delay:
-            self.delay.update(t_span, ode_hist)
+            self.delay.update(t_hist, ode_hist)
+
+        return t_hist, ode_hist, done
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
@@ -273,6 +291,9 @@ class Clock:
 
     def tick(self):
         self.t += self.dt
+
+    def set(self, t):
+        self.t = t
 
     def get(self):
         return self.t
