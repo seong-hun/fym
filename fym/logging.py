@@ -15,9 +15,10 @@ class Logger:
             os.makedirs(log_dir, exist_ok=True)
             path = os.path.join(log_dir, file_name)
 
-        self.h5file = None
-        self.mode = mode
         self.path = path
+        with h5py.File(self.path, mode):
+            pass
+        self.mode = mode
         self.max_len = max_len
         self.info = {}
 
@@ -29,17 +30,12 @@ class Logger:
 
     @path.setter
     def path(self, path):
-        if isinstance(self.h5file, h5py.File):
-            self.h5file.close()
-            os.remove(self._path)
-
         if path is not None:
             dirname = os.path.dirname(path)
             if dirname:
                 os.makedirs(dirname, exist_ok=True)
 
         self._path = path
-        self.h5file = h5py.File(path, self.mode)
 
     def clear(self):
         self.buffer = {}
@@ -53,32 +49,41 @@ class Logger:
         if self.len >= self.max_len:
             self.flush()
 
-    def flush(self):
-        save(self.h5file, self.buffer)
+    def flush(self, info=None):
+        with h5py.File(self.path, "r+") as h5file:
+            _rec_save(h5file, '/', self.buffer)
+            _info_save(h5file, info)
         self.clear()
 
     def close(self):
-        self.flush()
-        ser = pickle.dumps(self.info)
-        self.h5file.attrs.update(info=np.void(ser))
-        self.h5file.close()
+        self.flush(info=self.info)
 
     def set_info(self, **kwargs):
         _rec_update(self.info, kwargs, is_info=True)
 
 
-def save(h5file, dic, mode="w"):
+def save(h5file, dic, mode="w", info=None):
     if not isinstance(h5file, h5py.File):
         if isinstance(h5file, str):
             dirname = os.path.dirname(h5file)
+
             if dirname:
                 os.makedirs(dirname, exist_ok=True)
+
             with h5py.File(h5file, mode) as h5file:
                 _rec_save(h5file, '/', dic)
+                _info_save(h5file, info)
         else:
             raise ValueError(f'Cannot save into {type(h5file)} type')
     else:
         _rec_save(h5file, '/', dic)
+        _info_save(h5file, info)
+
+
+def _info_save(h5file, info=None):
+    if info is not None:
+        ser = pickle.dumps(info)
+        h5file.attrs.update(info=np.void(ser))
 
 
 def _rec_save(h5file, path, dic):
