@@ -141,10 +141,10 @@ class BaseEnv(gym.Env):
         if self.eager_stop:
             t_hist, ode_hist, done = self.eager_stop(t_hist, ode_hist)
 
-        t, y = t_hist[-1], ode_hist[-1]
+        tfinal, yfinal = t_hist[-1], ode_hist[-1]
         # Update the systems' state
         for system in self.systems:
-            system.state = y[system.flat_index].reshape(system.state_shape)
+            system.state = yfinal[system.flat_index].reshape(system.state_shape)
 
         # Log the inner history of states
         if not self.logging_off:
@@ -163,7 +163,7 @@ class BaseEnv(gym.Env):
                     self.logger.record(
                         **self.logger_callback(i, t, y, t_hist, ode_hist))
 
-        self.clock.set(t)
+        self.clock.set(tfinal)
 
         if self.delay:
             self.delay.update(t_hist, ode_hist)
@@ -264,6 +264,7 @@ class BaseSystem:
     @initial_state.setter
     def initial_state(self, val):
         self._initial_state = np.atleast_1d(val)
+        self.state = self._initial_state
 
     @property
     def dot(self):
