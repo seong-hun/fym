@@ -58,8 +58,10 @@ class Logger:
     def close(self):
         self.flush(info=self.info)
 
-    def set_info(self, **kwargs):
-        _rec_update(self.info, kwargs, is_info=True)
+    def set_info(self, *args, **kwargs):
+        _rec_update(self.info, dict(*args, **kwargs), is_info=True)
+        with h5py.File(self.path, "r+") as h5file:
+            _info_save(h5file, self.info)
 
 
 def save(h5file, dic, mode="w", info=None):
