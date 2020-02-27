@@ -13,23 +13,18 @@ import fym.logging as logging
 
 
 class BaseEnv(gym.Env):
-    def __init__(self, systems_dict, dt=0.01, max_t=1, eager_stop=None,
-                 logging_path=os.path.join("data", "tmp.h5"), logging_off=True,
+    def __init__(self, dt=0.01, max_t=1, eager_stop=None,
+                 logging_path=None, logging_off=True,
                  logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
-        self.name = name
-        self.systems_dict = systems_dict
-        self.systems = systems_dict.values()
-        self.state_shape = (sum([
-            functools.reduce(lambda a, b: a * b, system.state_shape)
-            for system in self.systems
-        ]),)
-        self.indexing()
+        self.name = name or self.__class__.__name__
+        self._systems = dict()
+        self.systems = self._systems.values()
         self.eager_stop = eager_stop
 
         if not hasattr(self, 'observation_space'):
-            self.observation_space = infer_obs_space(systems_dict)
+            self.set_obs_space()
             print(
                 "Observation space is inferred using the initial states "
                 f"of the systems: {self.systems_dict.keys()}"
@@ -43,8 +38,10 @@ class BaseEnv(gym.Env):
 
         self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
 
-        self.logging_off = logging_off
-        if not logging_off:
+        self.logging_off = logging_path is None and logging_off
+        if not self.logging_off:
+            if logging_path is None:
+                logging_path = os.path.join("data", "tmp.h5")
             self.logger = logging.Logger(path=logging_path)
             self.logger_callback = logger_callback
 
@@ -59,6 +56,33 @@ class BaseEnv(gym.Env):
         self.tqdm_bar = None
 
         self.delay = None
+
+    def __getattr__(self, name):
+        if "_systems" in self.__dict__:
+            systems = self.__dict__["_systems"]
+            if name in systems:
+                return systems[name]
+
+        return super().__getattribute__(name)
+
+        raise AttributeError(
+            f"{type(self).__name__} object has no attribute {name}")
+
+    def __setattr__(self, name, value):
+        if isinstance(value, (BaseSystem, BaseEnv)):
+            systems = self.__dict__.get("_systems")
+            if systems is None:
+                raise AttributeError(
+                    "cannot assign system before BaseEnv.__init__() call")
+            systems[name] = value
+            if isinstance(value, BaseSystem):
+                self.indexing()
+            self.set_obs_space()
+        else:
+            super().__setattr__(name, value)
+
+    def set_obs_space(self):
+        self.observation_space = infinite_box(self.state_shape)
 
     def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
@@ -102,6 +126,11 @@ class BaseEnv(gym.Env):
             size = functools.reduce(lambda a, b: a * b, system.state_shape)
             system.flat_index = slice(start, start + size)
             start += size
+
+        self.state_shape = (sum([
+            functools.reduce(lambda a, b: a * b, system.state_shape)
+            for system in self.systems
+        ]),)
 
     def reset(self):
         for system in self.systems:
@@ -201,7 +230,7 @@ class BaseEnv(gym.Env):
     def append_systems(self, systems):
         self.systems_dict.update(systems)
         self.indexing()
-        self.observation_space = infer_obs_space(self.systems_dict)
+        self.set_obs_space()
 
     def step(self, action):
         raise NotImplementedError
@@ -233,7 +262,7 @@ class BaseSystem:
         self.initial_state = initial_state
         self.state = self.initial_state
         self.state_shape = self.initial_state.shape
-        self.name = name
+        self.name = name or self.__class__.__name__
 
     def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
@@ -383,13 +412,12 @@ def infinite_box(shape):
     return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float32)
 
 
-def infer_obs_space(systems):
+def infer_obs_space(obj):
     """
     Infer the gym observation space from the ordered dictionary ``systems``,
     and return a gym.spaces.Dict
     """
-    obs_space = gym.spaces.Dict(
-        {k: infinite_box(s.state_shape) for k, s in systems.items()})
+    obs_space = infinite_box(obj.state_shape)
     return obs_space
 
 
