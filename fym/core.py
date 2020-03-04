@@ -27,7 +27,7 @@ class BaseEnv(gym.Env):
             self.set_obs_space()
             print(
                 "Observation space is inferred using the initial states "
-                f"of the systems: {self.systems_dict.keys()}"
+                f"of the systems: {self._systems.keys()}"
             )
 
         if not hasattr(self, 'action_space'):
@@ -75,8 +75,8 @@ class BaseEnv(gym.Env):
                 raise AttributeError(
                     "cannot assign system before BaseEnv.__init__() call")
             systems[name] = value
-            if isinstance(value, BaseSystem):
-                self.indexing()
+            # if isinstance(value, BaseSystem):
+            self.indexing()
             self.set_obs_space()
         else:
             super().__setattr__(name, value)
@@ -93,8 +93,7 @@ class BaseEnv(gym.Env):
             f"{self.state}"
         ]
         if hasattr(self, "dot"):
-            result.append("dot:"
-                          f"{self.dot}")
+            result += ["dot:", f"{self.dot}"]
         result.append("")
 
         for system in self.systems:
@@ -138,18 +137,38 @@ class BaseEnv(gym.Env):
         self.clock.reset()
 
     def observe_list(self, state=None):
+        res = []
         if state is None:
-            return [
-                system.state for system in self.systems
-            ]
+            for system in self.systems:
+                if isinstance(system, BaseSystem):
+                    res.append(system.state)
+                elif isinstance(system, BaseEnv):
+                    res.append(system.observe_list())
         else:
-            return [state[system.flat_index] for system in self.systems]
+            for system in self.systems:
+                if isinstance(system, BaseSystem):
+                    res.append(
+                        state[system.flat_index].reshape(system.state_shape))
+                elif isinstance(system, BaseEnv):
+                    res.append(system.observe_list(state[system.flat_index]))
+        return res
 
-    def observe_dict(self):
-        return {
-            name: system.state
-            for name, system in self.systems_dict.items()
-        }
+    def observe_dict(self, state=None):
+        res = {}
+        if state is None:
+            for name, system in self._systems.items():
+                if isinstance(system, BaseSystem):
+                    res[name] = system.state
+                elif isinstance(system, BaseEnv):
+                    res[name] = system.observe_dict()
+        else:
+            for name, system in self._systems.items():
+                if isinstance(system, BaseSystem):
+                    res[name] = state[system.flat_index].reshape(
+                        system.state_shape)
+                elif isinstance(system, BaseEnv):
+                    res[name] = system.observe_dict(state[system.flat_index])
+        return res
 
     def observe_flat(self):
         return np.hstack([
@@ -181,7 +200,7 @@ class BaseEnv(gym.Env):
                 for t, y in zip(t_hist[:-1], ode_hist[:-1]):
                     state_dict = {
                         name: y[system.flat_index].reshape(system.state_shape)
-                        for name, system in self.systems_dict.items()
+                        for name, system in self._systems.items()
                     }
                     if args:
                         self.logger.record(time=t, state=state_dict, args=args)
@@ -227,11 +246,6 @@ class BaseEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def append_systems(self, systems):
-        self.systems_dict.update(systems)
-        self.indexing()
-        self.set_obs_space()
-
     def step(self, action):
         raise NotImplementedError
 
@@ -273,8 +287,7 @@ class BaseSystem:
             f"{self.state}"
         ]
         if hasattr(self, "dot"):
-            result.append("dot:"
-                          f"{self.dot}")
+            result += ["dot:", f"{self.dot}"]
         result.append("")
         return "\n".join(result)
 
