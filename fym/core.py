@@ -14,8 +14,7 @@ import fym.logging as logging
 
 class BaseEnv(gym.Env):
     def __init__(self, dt=0.01, max_t=1, eager_stop=None,
-                 logging_path=None, logging_off=None,
-                 logger_callback=None,
+                 logger=None, logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
         self.name = name or self.__class__.__name__
@@ -38,14 +37,8 @@ class BaseEnv(gym.Env):
 
         self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
 
-        if logging_off is None:
-            logging_off = logging_path is None
-        self.logging_off = logging_off
-        if not self.logging_off:
-            if logging_path is None:
-                logging_path = os.path.join("data", "tmp.h5")
-            self.logger = logging.Logger(path=logging_path)
-            self.logger_callback = logger_callback
+        self.logger = logger
+        self.logger_callback = logger_callback
 
         # ODE Solver
         if solver == "odeint":
@@ -200,8 +193,8 @@ class BaseEnv(gym.Env):
             system.state = yfinal[system.flat_index].reshape(system.state_shape)
 
         # Log the inner history of states
-        if not self.logging_off:
-            if self.logger_callback is None:
+        if self.logger:
+            if not self.logger_callback:
                 for t, y in zip(t_hist[:-1], ode_hist[:-1]):
                     state_dict = {
                         name: y[system.flat_index].reshape(system.state_shape)
@@ -233,8 +226,7 @@ class BaseEnv(gym.Env):
         return wrapper
 
     def set_dot(self, time, *args):
-        """
-        Overwrite this method with a custom method.
+        """Overwrite this method with a custom method.
         Note that ``*args`` are fixed during integration.
         If you want to time-varying variables,
         i.e. state feedback control inputs, or time-varying commands,
@@ -251,11 +243,19 @@ class BaseEnv(gym.Env):
         """
         raise NotImplementedError
 
-    def step(self, action):
+    def step(self):
+        """Sample code:
+            ```python
+            def step(self):
+                self.update()
+                done = self.clock.time_over()
+                return self.observe_dict(), None, done, None
+            ```
+        """
         raise NotImplementedError
 
     def close(self):
-        if not self.logging_off:
+        if self.logger:
             self.logger.close()
         if self.tqdm_bar is not None:
             self.tqdm_bar.close()
