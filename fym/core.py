@@ -14,7 +14,7 @@ import fym.logging as logging
 
 class BaseEnv(gym.Env):
     def __init__(self, dt=0.01, max_t=1, eager_stop=None,
-                 logging_path=None, logging_off=True,
+                 logging_path=None, logging_off=None,
                  logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
@@ -38,7 +38,9 @@ class BaseEnv(gym.Env):
 
         self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
 
-        self.logging_off = logging_path is None and logging_off
+        if logging_off is None:
+            logging_off = logging_path is None
+        self.logging_off = logging_off
         if not self.logging_off:
             if logging_path is None:
                 logging_path = os.path.join("data", "tmp.h5")
@@ -75,6 +77,8 @@ class BaseEnv(gym.Env):
                 raise AttributeError(
                     "cannot assign system before BaseEnv.__init__() call")
             systems[name] = value
+            if isinstance(value, BaseEnv) or value.name is None:
+                value.name = name
             # if isinstance(value, BaseSystem):
             self.indexing()
             self.set_obs_space()
@@ -87,14 +91,15 @@ class BaseEnv(gym.Env):
     def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
         base = base + [name]
-        result = [
-            f"<{' - '.join(base)}>",
-            "state:",
-            f"{self.state}"
-        ]
-        if hasattr(self, "dot"):
-            result += ["dot:", f"{self.dot}"]
-        result.append("")
+        # result = [
+        #     f"<{' - '.join(base)}>",
+        #     "state:",
+        #     f"{self.state}"
+        # ]
+        # if hasattr(self, "dot"):
+        #     result += ["dot:", f"{self.dot}"]
+        # result.append("")
+        result = []
 
         for system in self.systems:
             v_str = system.__repr__(base=base)
@@ -276,7 +281,7 @@ class BaseSystem:
         self.initial_state = initial_state
         self.state = self.initial_state
         self.state_shape = self.initial_state.shape
-        self.name = name or self.__class__.__name__
+        self.name = name
 
     def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
