@@ -427,7 +427,7 @@ def deep_flatten(arg):
 
 
 def infinite_box(shape):
-    return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float32)
+    return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float64)
 
 
 def infer_obs_space(obj):
