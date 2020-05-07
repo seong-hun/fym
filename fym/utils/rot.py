@@ -5,6 +5,7 @@ from numpy import sin, cos
 
 
 def quat2dcm(q):
+    q = np.squeeze(q)
     q0, q1, q2, q3 = q / nla.norm(q)
 
     return np.array([
@@ -22,16 +23,16 @@ def angle2quat(yaw, pitch, roll):
     cp = cos(pitch * 0.5)
     sp = sin(pitch * 0.5)
 
-    q = np.zeros(4)
-    q[0] = cy * cr * cp + sy * sr * sp
-    q[1] = cy * sr * cp - sy * cr * sp
-    q[2] = cy * cr * sp + sy * sr * cp
-    q[3] = sy * cr * cp - cy * sr * sp
+    q = np.zeros((4, 1))
+    q[0, 0] = cy * cr * cp + sy * sr * sp
+    q[1, 0] = cy * sr * cp - sy * cr * sp
+    q[2, 0] = cy * cr * sp + sy * sr * cp
+    q[3, 0] = sy * cr * cp - cy * sr * sp
     return q
 
 
 def quat2angle(quat):
-    qin = quat / nla.norm(quat)
+    qin = (quat / nla.norm(quat)).squeeze()
 
     r11 = 2 * (qin[1] * qin[2] + qin[0] * qin[3])
     r12 = qin[0]**2 + qin[1]**2 - qin[2]**2 - qin[3]**2
