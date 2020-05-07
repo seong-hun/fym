@@ -174,13 +174,13 @@ class BaseEnv(gym.Env):
             system.state.ravel() for system in self.systems
         ])
 
-    def update(self, *args):
+    def update(self, **kwargs):
         t_hist = self.clock.get_thist()
         ode_hist = self.solver(
             func=self.ode_func,
             y0=self.observe_flat(),
             t=t_hist,
-            args=args,
+            args=kwargs.values(),
             **self.ode_option
         )
 
@@ -197,12 +197,9 @@ class BaseEnv(gym.Env):
         if self.logger:
             if not self.logger_callback:
                 for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                    state_dict = {
-                        name: y[system.flat_index].reshape(system.state_shape)
-                        for name, system in self._systems.items()
-                    }
-                    if args:
-                        self.logger.record(time=t, state=state_dict, args=args)
+                    state_dict = self.observe_dict(y)
+                    if kwargs:
+                        self.logger.record(time=t, state=state_dict, **kwargs)
                     else:
                         self.logger.record(time=t, state=state_dict)
             else:
