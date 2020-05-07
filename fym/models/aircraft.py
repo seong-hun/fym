@@ -162,18 +162,10 @@ class MorphingPlane(BaseEnv):
     )
 
     def __init__(self, velocity, omega, quaternion, position):
-        self.vel = BaseSystem(velocity, name="velocity")
-        self.omega = BaseSystem(omega, name="omega")
-        self.quat = BaseSystem(quaternion, name="quaternion")
-        self.pos = BaseSystem(position, name="position")
-        super().__init__(
-            systems_dict={
-                "velocity": self.vel,
-                "omega": self.omega,
-                "quaternion": self.quat,
-                "position": self.pos,
-            }
-        )
+        self.vel = BaseSystem(velocity, name="velocity")  # 3x1
+        self.omega = BaseSystem(omega, name="omega")  # 3x1
+        self.quat = BaseSystem(quaternion, name="quaternion")  # 4x1
+        self.pos = BaseSystem(position, name="position")  # 3x1
 
     def J(self, eta1, eta2):
         J_temp = self.J_template
@@ -323,18 +315,30 @@ def get_rho(altitude):
 
 
 class MorphingLon(BaseSystem, MorphingPlane):
+    """
+    This is a nonlinear simulator of morphing aircraft only considering
+    the longitudinal dynamics for reduced computational burden.
+
+    state (x)   : 4x1 vector of (V, alpha, q, gamma)
+    control (u) : 2x1 vector of (delt, dele)
+    morph (eta) : 2x1 vector of (eta1, eta2)
+    """
     rho = get_rho(300)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, init_state):
+        super().__init__(init_state)
         self.limits = np.vstack([
             self.control_limits[k]
             for k in ("delt", "dele", "eta1", "eta2")
-        ]).T
+        ])[:, None].transpose(2, 0, 1)
 
-    def deriv(self, x, u):
+    def deriv(self, x, u, eta):
+        """Get the state derivative for given (x, u)"""
+        self._check_control(u)
+
         V, alpha, q, gamma = x
-        delt, dele, eta1, eta2 = u
+        delt, dele = u
+        eta1, eta2 = eta
 
         S, cbar, Tmax = self.S, self.cbar, self.Tmax
         m, g = self.mass, self.g
@@ -351,26 +355,38 @@ class MorphingLon(BaseSystem, MorphingPlane):
         dq = M / Iy
         dgamma = 1 / (m * V) * (L + T * sin(alpha) - m * g * cos(gamma))
 
-        return np.hstack((dV, dalpha, dq, dgamma))
+        return np.vstack((dV, dalpha, dq, dgamma))
+
+    def _check_control(self, u):
+        tlim = self.control_limits["delt"]
+        elim = self.control_limits["dele"]
+
+        if tlim[0] > u[0] or tlim[1] < u[0]:
+            print("WARN: thrust is over the limits")
+
+        if elim[0] > u[1] or elim[1] < u[1]:
+            print("WARN: elevator is over the limits")
 
     def _trim_cost(self, z, fixed):
-        x, u = self._trim_convert(z, fixed)
-        dxs = self.deriv(x, u)
-        weight = np.diag([1, 1, 1000, 1])
-        return dxs.dot(weight).dot(dxs)
+        x, u, eta = self._trim_convert(z, fixed)
+        dxs = self.deriv(x, u, eta)
+        weight = np.diag([1, 1, 100, 1])
+        return dxs.T.dot(weight).dot(dxs)
 
     def _trim_convert(self, z, fixed):
         V, _, (eta1, eta2) = fixed
         alpha, delt, dele = z
         q, gamma = 0, 0
 
-        x = np.array([V, alpha, q, gamma])
-        u = np.array([delt, dele, eta1, eta2])
-        return x, u
+        x = np.vstack([V, alpha, q, gamma])
+        u = np.vstack([delt, dele])
+        eta = np.vstack([eta1, eta2])
+        return x, u, eta
 
-    def get_trim(self, z0={"alpha": 0.1, "delt": 0.13, "dele": 0},
+    def get_trim(self, z0={"alpha": 0.1, "delt": 0.19, "dele": 0},
                  fixed={"V": 20, "h": 300, "eta": (0.5, 0.5)},
-                 method="SLSQP", options={"disp": False, "ftol": 1e-10}):
+                 method="SLSQP", options={"disp": False, "ftol": 1e-10},
+                 verbose=False):
         z0 = list(z0.values())
         fixed = list(fixed.values())
         bounds = (
@@ -382,7 +398,33 @@ class MorphingLon(BaseSystem, MorphingPlane):
             self._trim_cost, z0, args=(fixed,),
             bounds=bounds, method=method, options=options)
 
-        return self._trim_convert(result.x, fixed)
+        x, u, eta = self._trim_convert(result.x, fixed)
+        dx = self.deriv(x, u, eta)
+
+        if verbose:
+            print("=========================================")
+            print("               Trim point                ")
+            print("               ----------                ")
+            print("VT:   {:5.2f} [m/s]    AOA:   {:5.2f} [deg]".format(
+                x[0, 0], x[1, 0] * np.rad2deg(1)))
+            print("Q:    {:5.2f} [deg/s]  Gamma: {:5.2f} [deg]".format(
+                x[2, 0] * np.rad2deg(1), x[3, 0] * np.rad2deg(1)))
+            print("delt: {:5.2f} [ ]      dele:  {:5.2f} [deg]".format(
+                u[0, 0], u[1, 0] * np.rad2deg(1)))
+            print("eta1: {:5.2f} [ ]      eta2:  {:5.2f} [ ]".format(
+                eta[0, 0], eta[1, 0]))
+
+            print("")
+            print("               Derivatives               ")
+            print("               -----------               ")
+            print("VT:  {:9.2e} [m/s]    AOA:   {:9.2e} [deg]".format(
+                dx[0, 0], dx[1, 0] * np.rad2deg(1)))
+            print("Q:   {:9.2e} [deg/s]  Gamma: {:9.2e} [deg]".format(
+                dx[2, 0] * np.rad2deg(1), dx[3, 0] * np.rad2deg(1)))
+            print("             (Norm: {:5.2e})".format(np.linalg.norm(dx)))
+            print("=========================================")
+
+        return x, u, eta
 
     def saturation(self, u):
         return np.clip(u, *self.limits)

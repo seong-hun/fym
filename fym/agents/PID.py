@@ -5,18 +5,16 @@ import numpy as np
 
 
 class PID():
-    def __init__(self, gain, windup=False, method='euler', dt=0.01):
+    def __init__(self, pgain=0, igain=0, dgain=0,
+                 windup=False, method='euler', dt=0.01):
         self.e_intg = 0
         self.e_prev = 0  # initial guess for differentiator
         self.windup = windup
         self.dt = dt
-        if len(gain) != 3:
-            print("PID gain must consist of three elements,"
-                  "i.e., p, i, and d.")
-        else:
-            self.p = gain[0]
-            self.i = gain[1]
-            self.d = gain[2]
+
+        self.p = pgain
+        self.i = igain
+        self.d = dgain
 
         if method == 'euler':
             self.integrate = intg_euler
