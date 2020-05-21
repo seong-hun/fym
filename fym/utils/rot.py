@@ -15,6 +15,31 @@ def quat2dcm(q):
     ])
 
 
+def dcm2quat(dcm):
+    tr = dcm[0, 0]+dcm[1, 1]+dcm[2, 2]
+    if tr > 0:
+        q0 = 0.5 * np.sqrt(np.abs(1+tr))
+        q1 = -(dcm[2, 1] - dcm[1, 2])/(4*q0)
+        q2 = -(dcm[0, 2] - dcm[2, 0])/(4*q0)
+        q3 = -(dcm[1, 0] - dcm[0, 1])/(4*q0)
+    elif dcm[0, 0] > dcm[1, 1] and dcm[0, 0] > dcm[2, 2]:
+        q1 = 0.5 * np.sqrt(1 + dcm[0, 0] - dcm[1, 1] - dcm[2, 2])
+        q0 = -(dcm[2, 1] - dcm[1, 2])/(4*q1)
+        q2 = (dcm[1, 0] + dcm[0, 1])/(4*q1)
+        q3 = (dcm[0, 2] + dcm[2, 0])/(4*q1)
+    elif dcm[1, 1] > dcm[2, 2]:
+        q2 = 0.5 * np.sqrt(1 - dcm[0, 0] + dcm[1, 1] - dcm[2, 2])
+        q0 = -(dcm[0, 2] - dcm[2, 0])/(4*q2)
+        q1 = (dcm[1, 0] + dcm[0, 1])/(4*q2)
+        q3 = (dcm[2, 1] + dcm[1, 2])/(4*q2)
+    else:
+        q3 = 0.5 * np.sqrt(1 - dcm[0, 0] - dcm[1, 1] + dcm[2, 2])
+        q0 = -(dcm[1, 0] - dcm[0, 1])/(4*q3)
+        q1 = (dcm[0, 2] + dcm[2, 0])/(4*q3)
+        q2 = (dcm[2, 1] + dcm[1, 2])/(4*q3)
+    return np.vstack((q0, q1, q2, q3))
+
+
 def angle2quat(yaw, pitch, roll):
     cy = cos(yaw * 0.5)
     sy = sin(yaw * 0.5)
@@ -32,6 +57,7 @@ def angle2quat(yaw, pitch, roll):
 
 
 def quat2angle(quat):
+    """Output: yaw, pitch, roll"""
     qin = (quat / nla.norm(quat)).squeeze()
 
     r11 = 2 * (qin[1] * qin[2] + qin[0] * qin[3])
