@@ -427,4 +427,105 @@ class MorphingLon(BaseSystem, MorphingPlane):
         return x, u, eta
 
     def saturation(self, u):
+<<<<<<< HEAD
         return np.clip(u, *self.limits)
+=======
+        limits = np.vstack([
+            self.control_limits[k]
+            for k in ("delt", "dele", "eta1", "eta2")
+        ])
+        return np.clip(u, *limits.T)
+
+
+class TransportLinearLongitudinal(BaseSystem):
+    """
+    Reference:
+        B. L. Stevens et al. "Aircraft Control and Simulation", 3/e, 2016
+        Example 4.6-4: Longitudinal Control for Automatic Landing
+    """
+    ap = np.array([
+        [-0.038580, 18.984, -32.139, 0, 1.3233E-4, 0],
+        [-0.0010280, -0.63253, 0.0056129, 1.0, 3.7553E-6, 0],
+        [0, 0, 0, 1.0, 0, 0],
+        [7.8601E-5, -0.75905, -0.00079341, -0.51830, -3.0808E-7, 0],
+        [-0.043620, -249.76, 249.76, 0, 0, 0],
+        [0, -250.00, 250.00, 0, 0, 0]
+    ])
+    bp = np.array([
+        [10.100, 0],
+        [-1.5446E-4, 0],
+        [0, 0],
+        [0.024656, -0.010770],
+        [0, 0],
+        [0, 0]
+    ])
+    cp = np.array([
+        [0, 0, 57.2958, 0, 0, 0],
+        [0, 0, 0, 57.2958, 0, 0, 0]
+    ])
+
+    def __init__(self, initial_state=[1, 0, 0, 0, 0, 0, 0]):
+        super().__init__(initial_state)
+
+    def deriv(self, x, u):
+        return self.ap.dot(x) + self.bp.dot(u)
+      
+
+class TransportAugLinear(BaseSystem):
+    """
+    Reference:
+        B. L. Stevens et al. "Aircraft Control and Simulation", 3/e, 2016
+        Example 5.5-5: Glide-Slope Coupler
+    """
+    A = np.array([
+        [-0.04, 19.0096, -32.1689, 0, 0, 10.1, 0, 0, 0, 0],
+        [-0.001, -0.64627, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, -0.7739, 0, -0.529765, 0, 0.02463, -0.011, 0, 0, 0],
+        [0, -250, 250, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, -0.2, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, -10, 0, 0, 0],
+        [-1, 0, 0, 0, 0, 0, 0, -5, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, -10, 1],
+        [0, 0, 0, 0, -1, 0, 0, 0, 0, 0]
+    ])
+    B = np.array([
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, -4.3633],
+        [0.2, 0, 0],
+        [0, 10, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ])
+    C = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 57.2958, 0, 0, 0, 0, 0, 0],
+        [0, 0, 57.2958, 0, 0, 0, 0, 0, 0, 0],
+        [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, -1, 0, 0, 0, 0, 0]
+    ])
+    G = np.array([
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [1, 0],
+        [0, 0],
+        [0, 1],
+    ])
+
+    def __init__(self, initial_state=[1, 0, 0, 0, 0, 0, 0, 0, 0, 0]):
+        super().__init__(initial_state)
+
+    def deriv(self, x, u):
+        return self.A.dot(x) + self.B.dot(u) + self.G.dot(np.array([0, 0]))
+>>>>>>> add-f16-lon
