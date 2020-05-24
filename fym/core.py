@@ -212,7 +212,7 @@ class BaseEnv(gym.Env):
         if self.delay:
             self.delay.update(t_hist, ode_hist)
 
-        return t_hist, ode_hist, done
+        return t_hist, ode_hist, done or self.clock.time_over()
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
