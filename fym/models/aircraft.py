@@ -427,9 +427,6 @@ class MorphingLon(BaseSystem, MorphingPlane):
         return x, u, eta
 
     def saturation(self, u):
-<<<<<<< HEAD
-        return np.clip(u, *self.limits)
-=======
         limits = np.vstack([
             self.control_limits[k]
             for k in ("delt", "dele", "eta1", "eta2")
@@ -469,7 +466,6 @@ class TransportLinearLongitudinal(BaseSystem):
 
     def deriv(self, x, u):
         return self.ap.dot(x) + self.bp.dot(u)
-      
 
 class TransportAugLinear(BaseSystem):
     """
@@ -528,4 +524,3 @@ class TransportAugLinear(BaseSystem):
 
     def deriv(self, x, u):
         return self.A.dot(x) + self.B.dot(u) + self.G.dot(np.array([0, 0]))
->>>>>>> add-f16-lon
