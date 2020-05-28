@@ -275,7 +275,9 @@ class BaseEnv(gym.Env):
 
 
 class BaseSystem:
-    def __init__(self, initial_state, name=None):
+    def __init__(self, initial_state=None, shape=(1, 1), name=None):
+        if initial_state is None:
+            initial_state = np.zeros(shape)
         self.initial_state = initial_state
         self.state = self.initial_state
         self.state_shape = self.initial_state.shape
