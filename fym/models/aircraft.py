@@ -68,6 +68,13 @@ class F16LinearLateral(BaseSystem):
     Reference:
         B. L. Stevens et al. "Aircraft Control and Simulation", 3/e, 2016
         Example 5.3-1: LQR Design for F-16 Lateral Regulator
+    Dynamics:
+        x_dot = Ax + Bu
+    State:
+        x = [beta, phi, p, r, del_a, del_r, x_w]
+        beta, phi: [rad], p, r: [rad/s], del_a, del_r: [deg]
+    Control input:
+        u = [u_a, u_r]  (aileron and rudder servo inputs, [deg])
     """
     A = np.array([
         [-0.322, 0.064, 0.0364, -0.9917, 0.0003, 0.0008, 0],
