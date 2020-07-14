@@ -19,7 +19,7 @@ time = data['time']
 plotter = plotting.Plotter()
 plotter.plot2d(time, state)  # tmp
 
-# - functions '_plot2d' and '_plot3d' (compatible with Matplotlib.pyplot)
+# - function 'plot' (compatible with Matplotlib.pyplot)
 data_dict = data
 data_dict["state3d"] = data["state"][:, :3]  # for 3d example
 data_dict["control_shift"] = data["control"] + np.rad2deg(1)  # broadcasting; for 2d example
@@ -50,4 +50,3 @@ weight_dict = {
 }
 save_dir = "./"
 figs = plotting.plot(data_dict, draw_dict, weight_dict=weight_dict, save_dir="./")
-import ipdb; ipdb.set_trace()
