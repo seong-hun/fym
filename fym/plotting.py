@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -73,16 +74,92 @@ class Plotter:
         plt.show()
 
 
+def plot(data_dict, draw_dict, weight_dict={}, save_dir="./",
+         option={"savefig": {"dpi": 150, "transparent": True}},):
+    figs = {}
+    for fig_name in draw_dict:
+        figs[fig_name] = plt.figure()
+        fig_dict = draw_dict[fig_name]
+        if fig_dict["type"] == "3d":
+            _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict)
+        elif fig_dict["type"] == "2d":
+            _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict)
+        os.makedirs(save_dir, exist_ok=True)
+        fig_path = os.path.join(save_dir, fig_name)
+        plt.savefig(fig_path, **option["savefig"])
+    plt.close("all")
+    return figs
+
+
+def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
+    # 3D graph
+    ax = figs[fig_name].add_subplot(1, 1, 1, projection="3d")
+    for i_plt, plot_name in enumerate(fig_dict["plot"]):
+        x, y, z = [data_dict[plot_name][:, i] for i in range(3)]
+        # ax.set_aspect("equal")  # not supported
+        colors = fig_dict.get("color")
+        color = colors[i_plt] if colors is not None else None
+        weights_xyz = weight_dict.get(plot_name)
+        if weights_xyz is None:
+            w_x, w_y, w_z = [np.ones(1), np.ones(1), np.ones(1)]  # broadcasting
+        else:
+            w_x, w_y, w_z = [weights_xyz[i] for i in range(3)]
+        labels = fig_dict.get("label")
+        label = labels[i_plt] if labels is not None else ""
+        ax.plot(w_x*x, w_y*y, w_z*z, c=color, label=label)
+        ax.set_xlabel(fig_dict["xlabel"])
+        ax.set_ylabel(fig_dict["ylabel"])
+        ax.set_zlabel(fig_dict["zlabel"])
+        ax.set_title(fig_name)
+    if labels is not None:
+        ax.legend()
+
+
+def _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict):
+    # time vs variable
+    ax = []
+    for i_plt, [x_name, y_name] in enumerate(fig_dict["plot"]):
+        data_x, data_y = data_dict[x_name], data_dict[y_name]
+        if len(data_y.shape) == 2:
+            data_y_dim = data_y.shape[1]
+        else:
+            data_y = np.expand_dims(data_y, axis=1)
+            data_y_dim = data_y.shape[1]
+        for i in range(data_y_dim):
+            if i_plt == 0:
+                ax.append(figs[fig_name].add_subplot(data_y_dim, 1, i+1))
+            w_x = weight_dict.get(x_name)
+            if w_x is None:
+                w_x = np.ones(1)  # broadcasting
+            w_ys = weight_dict.get(y_name)
+            if w_ys is None:
+                w_y = np.ones(1)  # broadcasting
+            else:
+                w_y = w_ys[i]
+            colors = fig_dict.get("color")
+            color = colors[i_plt] if colors is not None else None
+            labels = fig_dict.get("label")
+            label = labels[i_plt] if labels is not None else ""
+            ax[i].plot(w_x*data_x, w_y*data_y[:, i],
+                       c=color, label=label)
+            ax[i].set_xlabel(fig_dict["xlabel"])
+            ax[i].set_ylabel(fig_dict["ylabel"][i])
+            if "ylim" in fig_dict:
+                ax[i].set_ylim(fig_dict["ylim"][i])
+    ax[0].set_title(fig_name)
+    if labels is not None:
+        ax[0].legend()
+
+
 if __name__ == '__main__':
     import fym.logging
+    # - class 'Plotter' (will be deprecated)
     data = fym.logging.load('data/main/result.h5')  # result obtained from fym.logging
-
-# data consists of three keys: state, action, time
+    # data consists of three keys: state, action, time
     state = data['state']
-# e.g., system name is "main".
-# Note: state consists of keys corresponding to each systems.
+    # e.g., system name is "main".
+    # Note: state consists of keys corresponding to each systems.
     ctrl = data['control']
     time = data['time']
-
     plotter = Plotter()
     plotter.plot2d(time, state)  # tmp
