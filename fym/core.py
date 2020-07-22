@@ -39,7 +39,8 @@ class BaseEnv(gym.Env):
         self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
 
         self.logger = logger
-        self.logger_callback = logger_callback
+        if logger_callback is not None or not hasattr(self, "logger_callback"):
+            self.logger_callback = logger_callback
 
         # ODE Solver
         if solver == "odeint":
@@ -180,7 +181,7 @@ class BaseEnv(gym.Env):
             func=self.ode_func,
             y0=self.observe_flat(),
             t=t_hist,
-            args=kwargs.values(),
+            args=tuple(kwargs.values()),
             **self.ode_option
         )
 
