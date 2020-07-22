@@ -181,7 +181,7 @@ class BaseEnv(gym.Env):
             func=self.ode_func,
             y0=self.observe_flat(),
             t=t_hist,
-            args=kwargs.values(),
+            args=tuple(kwargs.values()),
             **self.ode_option
         )
 
