@@ -31,7 +31,7 @@ draw_dict = {
         "xlabel": "x0 (m)",
         "ylabel": "x1 (m)",
         "zlabel": "x2 (m)",
-        "color": ["b"],
+        "c": ["b"],
         "label": ["3d_example"]
     },
     "control": {
@@ -39,8 +39,9 @@ draw_dict = {
         "type": "2d",
         "xlabel": "t (s)",
         "ylabel": ["u0 (deg)", "u1 (deg)"],
-        "color": ["r", "b"],
+        "c": ["r", "b"],
         "label": ["u_shift", "u"],
+        "alpha": [0.5, 0.1],
     },
 }
 weight_dict = {
@@ -48,5 +49,6 @@ weight_dict = {
     "control_shift": np.rad2deg(1)*np.ones(2),
     # None: weight = 1. (In this case, default weights are given for e.g., "time" and "state3d")
 }
-save_dir = "./"
-figs = plotting.plot(data_dict, draw_dict, weight_dict=weight_dict, save_dir="./")
+save_dir = "./data/plot_figures"
+os.makedirs(save_dir, exist_ok=True)
+figs = plotting.plot(data_dict, draw_dict, weight_dict=weight_dict, save_dir=save_dir)
