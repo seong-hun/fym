@@ -75,7 +75,7 @@ class Plotter:
 
 
 def plot(data_dict, draw_dict, weight_dict={}, save_dir="./",
-         option={"savefig": {"dpi": 150, "transparent": True}},):
+         option={"savefig": {"dpi": 150, "transparent": False}},):
     figs = {}
     for fig_name in draw_dict:
         figs[fig_name] = plt.figure()
