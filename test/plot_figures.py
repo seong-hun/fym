@@ -26,8 +26,9 @@ data_dict["control_shift"] = data["control"] + np.rad2deg(1)  # broadcasting; fo
 # make draw dictionaries
 draw_dict = {
     "state_012": {
-        "plot": ["state3d"],
-        "type": "3d",
+        "plot": ["state3d", "state3d"],
+        "projection": "3d",
+        "type": ["plot", "scatter"],
         "xlabel": "x0 (m)",
         "ylabel": "x1 (m)",
         "zlabel": "x2 (m)",
@@ -36,7 +37,7 @@ draw_dict = {
     },
     "control": {
         "plot": [["time", "control_shift"], ["time", "control"]],
-        "type": "2d",
+        "projection": "2d",
         "xlabel": "t (s)",
         "ylabel": ["u0 (deg)", "u1 (deg)"],
         "c": ["r", "b"],

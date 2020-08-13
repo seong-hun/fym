@@ -80,9 +80,9 @@ def plot(data_dict, draw_dict, weight_dict={}, save_dir="./",
     for fig_name in draw_dict:
         figs[fig_name] = plt.figure()
         fig_dict = draw_dict[fig_name]
-        if fig_dict["type"] == "3d":
+        if fig_dict["projection"] == "3d":
             _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict)
-        elif fig_dict["type"] == "2d":
+        elif fig_dict["projection"] == "2d":
             _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict)
         os.makedirs(save_dir, exist_ok=True)
         fig_path = os.path.join(save_dir, fig_name)
@@ -95,7 +95,7 @@ def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
     # 3d graph
     ax = figs[fig_name].add_subplot(1, 1, 1, projection="3d")
     for i_plt, plot_name in enumerate(fig_dict["plot"]):
-        x, y, z = [data_dict[plot_name][:, i] for i in range(3)]
+        data_x, data_y, data_z = [data_dict[plot_name][:, i] for i in range(3)]
         # ax.set_aspect("equal")  # not supported
         # weight
         weights_xyz = weight_dict.get(plot_name)
@@ -107,7 +107,13 @@ def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
         plot_property_dict = {}
         for key in ["c", "label", "alpha"]:
             plot_property_dict[key] = _get_plot_property(fig_dict, key, i_plt)
-        ax.plot(w_x*x, w_y*y, w_z*z, **plot_property_dict)
+        plot_type = fig_dict.get("type")
+        if plot_type is None:
+            ax.plot(w_x*data_x, w_y*data_y, w_z*data_z, **plot_property_dict)  # default
+        elif plot_type[i_plt] == "scatter":
+            ax.scatter(w_x*data_x, w_y*data_y, w_z*data_z, **plot_property_dict)
+        else:
+            ax.plot(w_x*data_x, w_y*data_y, w_z*data_z, **plot_property_dict)  # default
         ax.set_xlabel(fig_dict["xlabel"])
         ax.set_ylabel(fig_dict["ylabel"])
         ax.set_zlabel(fig_dict["zlabel"])
@@ -142,7 +148,13 @@ def _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict):
             plot_property_dict = {}
             for key in ["c", "label", "alpha"]:
                 plot_property_dict[key] = _get_plot_property(fig_dict, key, i_plt)
-            ax[i].plot(w_x*data_x, w_y*data_y[:, i], **plot_property_dict)
+            plot_type = fig_dict.get("type")
+            if plot_type is None:
+                ax[i].plot(w_x*data_x, w_y*data_y[:, i], **plot_property_dict)  # default
+            elif plot_type[i_plt] == "scatter":
+                ax[i].scatter(w_x*data_x, w_y*data_y[:, i], **plot_property_dict)
+            else:
+                ax[i].plot(w_x*data_x, w_y*data_y[:, i], **plot_property_dict)  # default
             ax[i].set_xlabel(fig_dict["xlabel"])
             ax[i].set_ylabel(fig_dict["ylabel"][i])
             if "ylim" in fig_dict:
