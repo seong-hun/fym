@@ -30,8 +30,9 @@ draw_dict = {
         "projection": "3d",
         "type": ["plot", "scatter"],
         "xlabel": "x0 (m)",
-        "ylabel": "x1 (m)",
+        # "ylabel": "x1 (m)",
         "zlabel": "x2 (m)",
+        "xlim": [0., 1.],
         "c": ["b"],
         "label": ["3d_example"]
     },
@@ -40,6 +41,7 @@ draw_dict = {
         "projection": "2d",
         "xlabel": "t (s)",
         "ylabel": ["u0 (deg)", "u1 (deg)"],
+        "ylim": [[-3e3, 4e3], [1e3, 9e3]],
         "c": ["r", "b"],
         "label": ["u_shift", "u"],
         "alpha": [0.5, 0.1],

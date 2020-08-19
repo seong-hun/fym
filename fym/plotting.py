@@ -114,9 +114,19 @@ def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
             ax.scatter(w_x*data_x, w_y*data_y, w_z*data_z, **plot_property_dict)
         else:
             ax.plot(w_x*data_x, w_y*data_y, w_z*data_z, **plot_property_dict)  # default
-        ax.set_xlabel(fig_dict["xlabel"])
-        ax.set_ylabel(fig_dict["ylabel"])
-        ax.set_zlabel(fig_dict["zlabel"])
+        # label, lim
+        if fig_dict.get("xlabel") is not None:
+            ax.set_xlabel(fig_dict["xlabel"])
+        if fig_dict.get("ylabel") is not None:
+            ax.set_ylabel(fig_dict["ylabel"])
+        if fig_dict.get("zlabel") is not None:
+            ax.set_zlabel(fig_dict["zlabel"])
+        if fig_dict.get("xlim") is not None:
+            ax.set_xlim3d(*fig_dict["xlim"])
+        if fig_dict.get("ylim") is not None:
+            ax.set_ylim3d(*fig_dict["ylim"])
+        if fig_dict.get("zlim") is not None:
+            ax.set_zlim3d(*fig_dict["zlim"])
         ax.set_title(fig_name)
     if fig_dict.get("label") is not None:
         ax.legend()
@@ -155,10 +165,15 @@ def _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict):
                 ax[i].scatter(w_x*data_x, w_y*data_y[:, i], **plot_property_dict)
             else:
                 ax[i].plot(w_x*data_x, w_y*data_y[:, i], **plot_property_dict)  # default
-            ax[i].set_xlabel(fig_dict["xlabel"])
-            ax[i].set_ylabel(fig_dict["ylabel"][i])
-            if "ylim" in fig_dict:
-                ax[i].set_ylim(fig_dict["ylim"][i])
+            # label, lim
+            if fig_dict.get("xlabel") is not None:
+                ax[i].set_xlabel(fig_dict["xlabel"])
+            if fig_dict.get("ylabel") is not None:
+                ax[i].set_ylabel(fig_dict["ylabel"][i])
+            if fig_dict.get("xlim") is not None:
+                ax[i].set_xlim(*fig_dict["xlim"])
+            if fig_dict.get("ylim") is not None:
+                ax[i].set_ylim(*fig_dict["ylim"][i])
     ax[0].set_title(fig_name)
     if fig_dict.get("label") is not None:
         ax[0].legend()
