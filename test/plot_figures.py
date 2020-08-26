@@ -9,39 +9,46 @@ import fym.logging
 
 data = fym.logging.load('data/plot_figures/result.h5')  # a simulation result obtained from fym
 
-# - class 'Plotter' (will be deprecated)
-# data consists of three keys: state, action, time
-state = data['state']
-# e.g., system name is "main".
-# Note: state consists of keys corresponding to each systems.
-ctrl = data['control']
-time = data['time']
-plotter = plotting.Plotter()
-plotter.plot2d(time, state)  # tmp
-
 # - function 'plot' (compatible with Matplotlib.pyplot)
 data_dict = data
 data_dict["state3d"] = data["state"][:, :3]  # for 3d example
 data_dict["control_shift"] = data["control"] + np.rad2deg(1)  # broadcasting; for 2d example
 # make draw dictionaries
 draw_dict = {
+    "state_012_equal": {
+        "plot": ["state3d"],
+        "projection": "3d",
+        "type": ["plot"],
+        "xlabel": "x0 (m)",
+        # "ylabel": "x1 (m)",
+        "zlabel": "x2 (m)",
+        # "xlim": [0., 1.],
+        "c": ["b"],
+        "label": ["3d_example"],
+        "axis": "equal",
+    },
     "state_012": {
         "plot": ["state3d"],
-        "type": "3d",
+        "projection": "3d",
+        "type": ["plot"],
         "xlabel": "x0 (m)",
-        "ylabel": "x1 (m)",
+        # "ylabel": "x1 (m)",
         "zlabel": "x2 (m)",
+        # "xlim": [0., 1.],
         "c": ["b"],
-        "label": ["3d_example"]
+        "label": ["3d_example"],
     },
     "control": {
         "plot": [["time", "control_shift"], ["time", "control"]],
-        "type": "2d",
+        "type": ["plot", "scatter"],
+        "projection": "2d",
         "xlabel": "t (s)",
         "ylabel": ["u0 (deg)", "u1 (deg)"],
+        "ylim": [[-3e3, 4e3], [1e3, 9e3]],
         "c": ["r", "b"],
         "label": ["u_shift", "u"],
         "alpha": [0.5, 0.1],
+        # "axis": "equal",
     },
 }
 weight_dict = {
