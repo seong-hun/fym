@@ -56,13 +56,23 @@ def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
         if fig_dict.get("zlabel") is not None:
             ax.set_zlabel(fig_dict["zlabel"])
         if fig_dict.get("xlim") is not None:
-            ax.set_xlim3d(*fig_dict["xlim"])
+            xlim = fig_dict["xlim"]
+            ax.set_xlim3d(*xlim)
+        else:
+            xlim = [X.min(), X.max()]
         if fig_dict.get("ylim") is not None:
-            ax.set_ylim3d(*fig_dict["ylim"])
+            ylim = fig_dict["ylim"]
+            ax.set_ylim3d(*ylim)
+        else:
+            ylim = [Y.min(), Y.max()]
         if fig_dict.get("zlim") is not None:
-            ax.set_zlim3d(*fig_dict["zlim"])
+            zlim = fig_dict["zlim"]
+            ax.set_ylim3d(*zlim)
+        else:
+            zlim = [Z.min(), Z.max()]
         if fig_dict.get("axis") == "equal":
-            _axis_equal(ax, [X, Y, Z], projection="3d")
+            lims = [xlim, ylim, zlim]
+            _axis_equal(ax, lims, projection="3d")
         ax.set_title(fig_name)
     if fig_dict.get("label") is not None:
         ax.legend()
@@ -132,17 +142,17 @@ def _get_plot_property(fig_dict, key, i_plt):
     return value
 
 
-def _axis_equal(ax, weighted_data_list=None, projection="2d"):
+def _axis_equal(ax, lims=None, projection="2d"):
     if projection == "2d":
         ax.axis("equal")
     elif projection == "3d":
-        X, Y, Z = weighted_data_list
+        xlim, ylim, zlim = lims
         # ax should be a 3d figure
         # Create cubic bounding box to simulate equal aspect ratio
-        max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max()
-        Xb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][0].flatten() + 0.5*(X.max()+X.min())
-        Yb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][1].flatten() + 0.5*(Y.max()+Y.min())
-        Zb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][2].flatten() + 0.5*(Z.max()+Z.min())
+        max_range = np.array([xlim[1]-xlim[0], ylim[1]-ylim[0], zlim[1]-zlim[0]]).max()
+        Xb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][0].flatten() + 0.5*(xlim[1]+xlim[0])
+        Yb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][1].flatten() + 0.5*(ylim[1]+ylim[0])
+        Zb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][2].flatten() + 0.5*(zlim[1]+zlim[0])
         for xb, yb, zb in zip(Xb, Yb, Zb):
             ax.plot([xb], [yb], [zb], 'w')
 
