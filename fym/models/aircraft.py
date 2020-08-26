@@ -332,8 +332,12 @@ class MorphingLon(BaseSystem, MorphingPlane):
     """
     rho = get_rho(300)
 
-    def __init__(self, init_state):
+    def __init__(self, init_state=None):
+        if init_state is None:
+            init_state, *_ = self.get_trim(verbose=True)
+
         super().__init__(init_state)
+
         self.limits = np.vstack([
             self.control_limits[k]
             for k in ("delt", "dele", "eta1", "eta2")
@@ -378,7 +382,7 @@ class MorphingLon(BaseSystem, MorphingPlane):
         x, u, eta = self._trim_convert(z, fixed)
         dxs = self.deriv(x, u, eta)
         weight = np.diag([1, 1, 100, 1])
-        return dxs.T.dot(weight).dot(dxs)
+        return dxs.T.dot(weight).dot(dxs)[0][0]
 
     def _trim_convert(self, z, fixed):
         V, _, (eta1, eta2) = fixed
@@ -473,6 +477,7 @@ class TransportLinearLongitudinal(BaseSystem):
 
     def deriv(self, x, u):
         return self.ap.dot(x) + self.bp.dot(u)
+
 
 class TransportAugLinear(BaseSystem):
     """
