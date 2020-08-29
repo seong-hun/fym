@@ -17,6 +17,7 @@ def plot(data_dict, draw_dict, weight_dict={}, save_dir="./",
             _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict)
         elif fig_dict["projection"] == "2d":
             _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict)
+        plt.tight_layout()  # tight layout
         os.makedirs(save_dir, exist_ok=True)
         fig_path = os.path.join(save_dir, fig_name)
         plt.savefig(fig_path, **option["savefig"])

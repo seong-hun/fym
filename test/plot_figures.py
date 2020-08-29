@@ -1,11 +1,15 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc
 
 import fym
 import fym.plotting as plotting
 import fym.logging
 
+rc('font', **{
+    "size": 22,
+})
 
 data = fym.logging.load('data/plot_figures/result.h5')  # a simulation result obtained from fym
 
