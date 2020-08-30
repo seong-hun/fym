@@ -58,22 +58,23 @@ def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
             ax.set_zlabel(fig_dict["zlabel"])
         if fig_dict.get("xlim") is not None:
             xlim = fig_dict["xlim"]
-            ax.set_xlim3d(*xlim)
         else:
             xlim = [X.min(), X.max()]
         if fig_dict.get("ylim") is not None:
             ylim = fig_dict["ylim"]
-            ax.set_ylim3d(*ylim)
         else:
             ylim = [Y.min(), Y.max()]
         if fig_dict.get("zlim") is not None:
             zlim = fig_dict["zlim"]
-            ax.set_zlim3d(*zlim)
         else:
             zlim = [Z.min(), Z.max()]
         if fig_dict.get("axis") == "equal":
             lims = [xlim, ylim, zlim]
             _axis_equal(ax, lims, projection="3d")
+        else:
+            ax.set_xlim3d(*xlim)
+            ax.set_ylim3d(*ylim)
+            ax.set_zlim3d(*zlim)
         ax.set_title(fig_name)
     if fig_dict.get("label") is not None:
         ax.legend()
