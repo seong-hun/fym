@@ -68,7 +68,7 @@ def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
             ylim = [Y.min(), Y.max()]
         if fig_dict.get("zlim") is not None:
             zlim = fig_dict["zlim"]
-            ax.set_ylim3d(*zlim)
+            ax.set_zlim3d(*zlim)
         else:
             zlim = [Z.min(), Z.max()]
         if fig_dict.get("axis") == "equal":
