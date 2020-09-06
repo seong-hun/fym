@@ -280,7 +280,7 @@ class BaseSystem:
         if initial_state is None:
             initial_state = np.zeros(shape)
         self.initial_state = initial_state
-        self.state = self.initial_state
+        # self.state = self.initial_state
         self.state_shape = self.initial_state.shape
         self.name = name
 
