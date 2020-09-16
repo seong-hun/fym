@@ -1,7 +1,7 @@
 import gym
 from gym import spaces
 import numpy as np
-from scipy.spatial.transform import Rotation as R
+import fym.utils.rot as rot
 
 from fym.core import BaseEnv, BaseSystem
 
@@ -76,7 +76,7 @@ def hat(v):
 if __name__ == '__main__':
     x = np.zeros((3, 1))
     v = np.zeros((3, 1))
-    dcm = R.from_euler('ZYX', [0, 0, 0]).as_dcm()
+    dcm = rot.angle2dcm(0, 0, 0)
     omega = np.zeros((3, 1))
 
     system = Quadrotor(x, v, dcm, omega)
