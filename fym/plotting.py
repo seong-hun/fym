@@ -6,9 +6,21 @@ from collections import OrderedDict
 
 import fym
 
+def plot(data_dict, draw_dict, weight_dict={}, save_dir="./", option={}):
+    default_option={"savefig": {"onoff": True, "dpi": 150,
+                                "transparent": False},
+                    "showfig": {"onoff": False, "showkey": []}}
 
-def plot(data_dict, draw_dict, weight_dict={}, save_dir="./",
-         option={"savefig": {"dpi": 150, "transparent": False}},):
+    key_diff = default_option.keys() - option.keys()
+    for key in key_diff:
+        option[key] = default_option[key]
+    for key in default_option.keys() & option.keys():
+        if type(default_option[key]) == type(option[key]) and \
+        isinstance(option[key], dict) is True:
+            key_diff2 = default_option[key].keys() - option[key].keys()
+            for key2 in key_diff2:
+                option[key][key2] = default_option[key][key2]
+
     figs = {}
     for fig_name in draw_dict:
         figs[fig_name] = plt.figure()
@@ -17,10 +29,20 @@ def plot(data_dict, draw_dict, weight_dict={}, save_dir="./",
             _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict)
         elif fig_dict["projection"] == "2d":
             _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict)
-        os.makedirs(save_dir, exist_ok=True)
-        fig_path = os.path.join(save_dir, fig_name)
-        plt.savefig(fig_path, **option["savefig"])
-    plt.close("all")
+
+        if option["savefig"]["onoff"] is True:
+            os.makedirs(save_dir, exist_ok=True)
+            fig_path = os.path.join(save_dir, fig_name)
+            plt.savefig(fig_path, **option["savefig"])
+
+    if option["showfig"]["onoff"] is True:
+        if option["showfig"]["showkey"]:
+            key_diff3 = figs.keys() - option["showfig"]["showkey"]
+            for key3 in key_diff3:
+                plt.close(figs[key3])
+        plt.show()
+    else:
+        plt.close("all")
     return figs
 
 
@@ -106,11 +128,17 @@ def _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict):
             if fig_dict.get("xlabel") is not None:
                 ax[i].set_xlabel(fig_dict["xlabel"])
             if fig_dict.get("ylabel") is not None:
-                ax[i].set_ylabel(fig_dict["ylabel"][i])
+                if isinstance(fig_dict.get("ylabel"), list) is False:
+                    ax[i].set_ylabel(fig_dict["ylabel"])
+                else:
+                    ax[i].set_ylabel(fig_dict["ylabel"][i])
             if fig_dict.get("xlim") is not None:
                 ax[i].set_xlim(*fig_dict["xlim"])
             if fig_dict.get("ylim") is not None:
-                ax[i].set_ylim(*fig_dict["ylim"][i])
+                if isinstance(fig_dict.get('ylim')[0], list) is False:
+                    ax[i].set_ylim(*fig_dict["ylim"])
+                else:
+                    ax[i].set_ylim(*fig_dict["ylim"][i])
             if fig_dict.get("axis") == "equal":
                 _axis_equal(ax[i])
     ax[0].set_title(fig_name)
@@ -125,10 +153,13 @@ def _get_plot_property(fig_dict, key, i_plt):
     if values is None:
         value = None
     else:
-        if len(values) < (i_plt+1):
-            value = None  # default value
+        if isinstance(values, list) is False:
+            value = values
         else:
-            value = values[i_plt]
+            if len(values) < (i_plt+1):
+                value = None  # default value
+            else:
+                value = values[i_plt]
     return value
 
 
