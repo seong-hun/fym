@@ -392,8 +392,9 @@ class Clock:
         self.max_len = int(max_t / dt) + 1
         self.thist = np.linspace(0, dt, ode_step_len + 1)
 
-    def reset(self):
-        self.t = 0
+    def reset(self, t=0.):
+        self.t = t
+        self.max_len = int((self.max_t - t) / self.dt) + 1
 
     def tick(self):
         self.t += self.dt
@@ -452,7 +453,7 @@ class Delay:
             interp1d(t_hist, state_hist, axis=0, fill_value=self.fill_value)
         )
 
-        if self.clock.get() >= self.T:
+        if t_hist[-1] >= self.T:
             self.memory_dump = self.memory.pop(0)
 
 
