@@ -21,6 +21,11 @@ class BaseEnv(gym.Env):
         self._systems = dict()
         self.systems = self._systems.values()
 
+        self._delays = dict()
+        self.delays = self._delays.values()
+
+        self.indexing()
+
         self.eager_stop = eager_stop
 
         if not hasattr(self, 'observation_space'):
@@ -52,13 +57,16 @@ class BaseEnv(gym.Env):
         self.ode_option = ode_option
         self.tqdm_bar = None
 
-        self.delay = None
-
     def __getattr__(self, name):
         if "_systems" in self.__dict__:
             systems = self.__dict__["_systems"]
             if name in systems:
                 return systems[name]
+
+        if "_delays" in self.__dict__:
+            delays = self.__dict__["_delays"]
+            if name in delays:
+                return delays[name]
 
         return super().__getattribute__(name)
 
@@ -77,6 +85,12 @@ class BaseEnv(gym.Env):
             # if isinstance(value, BaseSystem):
             self.indexing()
             self.set_obs_space()
+        elif isinstance(value, Delay):
+            delays = self.__dict__.get("_delays")
+            if delays is None:
+                raise AttributeError(
+                    "cannot assign delays before BaseEnv.__init__() call")
+            delays[name] = value
         else:
             super().__setattr__(name, value)
 
@@ -112,7 +126,11 @@ class BaseEnv(gym.Env):
 
     @property
     def dot(self):
-        return np.hstack([np.ravel(system.dot) for system in self.systems])
+        dot = []
+        for system in self.systems:
+            if system.dot is not None:
+                dot.append(np.reshape(system.dot, (-1, 1)))
+        return np.vstack(dot) if dot != [] else dot
 
     @dot.setter
     def dot(self, dot):
@@ -194,6 +212,8 @@ class BaseEnv(gym.Env):
         for system in self.systems:
             system.state = yfinal[system.flat_index].reshape(system.state_shape)
 
+        self.update_delays(t_hist, ode_hist)
+
         # Log the inner history of states
         if self.logger:
             if not self.logger_callback:
@@ -210,10 +230,15 @@ class BaseEnv(gym.Env):
 
         self.clock.set(tfinal)
 
-        if self.delay:
-            self.delay.update(t_hist, ode_hist)
-
         return t_hist, ode_hist, done or self.clock.time_over()
+
+    def update_delays(self, t_hist, ode_hist):
+        for delay in self.delays:
+            delay.update(t_hist, ode_hist)
+
+        for system in self.systems:
+            if isinstance(system, BaseEnv):
+                system.update_delays(t_hist, ode_hist)
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
@@ -271,9 +296,6 @@ class BaseEnv(gym.Env):
             if desc:
                 self.tqdm_bar.set_description(desc)
 
-    def set_delay(self, systems: list, T):
-        self.delay = Delay(self.clock, systems, T)
-
 
 class BaseSystem:
     def __init__(self, initial_state=None, shape=(1, 1), name=None):
@@ -283,6 +305,8 @@ class BaseSystem:
         # self.state = self.initial_state
         self.state_shape = self.initial_state.shape
         self.name = name
+
+        self.has_delay = False
 
     def __repr__(self, base=[]):
         name = self.name or self.__class__.__name__
@@ -325,6 +349,14 @@ class BaseSystem:
     def reset(self):
         self.state = self.initial_state
         return self.state
+
+    def set_delay(self, T):
+        self.delay = Delay(self, T)
+        self.has_delay = True
+
+    def update_delays(self, t_hist, ode_hist):
+        if self.has_delay:
+            self.delay.update(t_hist, ode_hist)
 
 
 class Sequential(BaseEnv):
@@ -377,30 +409,29 @@ class Clock:
 
 
 class Delay:
-    def __init__(self, clock, systems: list, T, fill_value="extrapolate"):
-        if clock.dt > T:
-            raise ValueError("Time step should be smaller than the delay")
-
-        self.clock = clock
-        self.systems = systems
+    def __init__(self, system, T, fill_value="extrapolate"):
+        self.system = system
         self.T = T
         self.fill_value = fill_value
 
         self.memory = []
+        self.memory_dump = None
 
-    def available(self):
-        return self.clock.get() >= self.T
+    def available(self, t):
+        return t >= self.T
 
-    def set_states(self, time):
-        if time > self.memory_dump.x[-1] + self.T:
-            fit = self.memory[0]
+    def get(self, t):
+        if self.memory_dump is not None:
+            if t > self.memory_dump.x[-1] + self.T:
+                fit = self.memory[0]
+            else:
+                fit = self.memory_dump
+
+            y = fit(t - self.T)
+
+            return y[self.system.flat_index].reshape(self.system.state_shape)
         else:
-            fit = self.memory_dump
-
-        y = fit(time - self.T)
-
-        for system in self.systems:
-            system.d_state = y[system.flat_index].reshape(system.state_shape)
+            return self.system.state
 
     def update(self, t_hist, state_hist):
         self.memory.append(
