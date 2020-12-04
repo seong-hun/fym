@@ -17,7 +17,7 @@ class BaseEnv(gym.Env):
                  logger=None, logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
-        self.name = name or self.__class__.__name__
+        self._name = name or self.__class__.__name__
         self._systems = dict()
         self.systems = self._systems.values()
 
@@ -80,8 +80,8 @@ class BaseEnv(gym.Env):
                 raise AttributeError(
                     "cannot assign system before BaseEnv.__init__() call")
             systems[name] = value
-            if isinstance(value, BaseEnv) or value.name is None:
-                value.name = name
+            if isinstance(value, BaseEnv) or value._name is None:
+                value._name = name
             # if isinstance(value, BaseSystem):
             self.indexing()
             self.set_obs_space()
@@ -98,7 +98,7 @@ class BaseEnv(gym.Env):
         self.observation_space = infinite_box(self.state_shape)
 
     def __repr__(self, base=[]):
-        name = self.name or self.__class__.__name__
+        name = self._name or self.__class__.__name__
         base = base + [name]
         # result = [
         #     f"<{' - '.join(base)}>",
@@ -304,12 +304,12 @@ class BaseSystem:
         self.initial_state = initial_state
         # self.state = self.initial_state
         self.state_shape = self.initial_state.shape
-        self.name = name
+        self._name = name
 
         self.has_delay = False
 
     def __repr__(self, base=[]):
-        name = self.name or self.__class__.__name__
+        name = self._name or self.__class__.__name__
         base = base + [name]
         result = [
             f"<{' - '.join(base)}>",
