@@ -140,7 +140,7 @@ def _rec_update(base_dict, input_dict, is_info=False):
                 base_dict.update({key: val})
             else:
                 if not isinstance(val, str):
-                    base_dict.setdefault(key, []).append(val)
+                    base_dict.setdefault(key, []).append(np.copy(val))
                 else:
                     raise ValueError("Unsupported data type")
 
