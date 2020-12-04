@@ -20,7 +20,7 @@ class Logger:
             pass
         self.mode = mode
         self.max_len = max_len
-        self.info = {}
+        self._info = {}
 
         self.clear()
 
@@ -56,12 +56,12 @@ class Logger:
         self.clear()
 
     def close(self):
-        self.flush(info=self.info)
+        self.flush(info=self._info)
 
     def set_info(self, *args, **kwargs):
-        _rec_update(self.info, dict(*args, **kwargs), is_info=True)
+        _rec_update(self._info, dict(*args, **kwargs), is_info=True)
         with h5py.File(self.path, "r+") as h5file:
-            _info_save(h5file, self.info)
+            _info_save(h5file, self._info)
 
 
 def save(h5file, dic, mode="w", info=None):
@@ -85,7 +85,7 @@ def save(h5file, dic, mode="w", info=None):
 def _info_save(h5file, info=None):
     if info is not None:
         ser = pickle.dumps(info)
-        h5file.attrs.update(info=np.void(ser))
+        h5file.attrs.update(_info=np.void(ser))
 
 
 def _rec_save(h5file, path, dic):
@@ -115,7 +115,7 @@ def load(path, with_info=False):
     with h5py.File(path, 'r') as h5file:
         ans = _rec_load(h5file, '/')
         if with_info:
-            return ans, pickle.loads(h5file.attrs["info"].tostring())
+            return ans, pickle.loads(h5file.attrs["_info"].tostring())
         else:
             return ans
 
