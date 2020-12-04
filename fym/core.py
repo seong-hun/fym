@@ -117,7 +117,7 @@ class BaseEnv(gym.Env):
 
     @property
     def state(self):
-        return self.observe_flat()
+        return self.observe_vec()
 
     @state.setter
     def state(self, state):
@@ -147,7 +147,7 @@ class BaseEnv(gym.Env):
 
         self.state_shape = (sum([
             system.state_size for system in self.systems
-        ]),)
+        ]), 1)
 
     def reset(self):
         for system in self.systems:
@@ -188,10 +188,24 @@ class BaseEnv(gym.Env):
                     res[name] = system.observe_dict(state[system.flat_index])
         return res
 
+    def observe_vec(self, state=None):
+        res = []
+        if state is None:
+            res = [system.state.reshape(-1, 1) for system in self.systems]
+        else:
+            for system in self.systems:
+                if isinstance(system, BaseSystem):
+                    res.append(state[system.flat_index].reshape(-1, 1))
+                elif isinstance(system, BaseEnv):
+                    res.append(system.observe_vec(state[system.flat_index]))
+        return np.vstack(res) if res != [] else []
+
     def observe_flat(self):
-        return np.hstack([
-            system.state.ravel() for system in self.systems
-        ])
+        flat = []
+        for system in self.systems:
+            if system.state is not None:
+                flat.append(np.ravel(system.state))
+        return np.hstack(flat) if flat != [] else flat
 
     def update(self, **kwargs):
         t_hist = self.clock.get_thist()
@@ -246,7 +260,7 @@ class BaseEnv(gym.Env):
             for system in self.systems:
                 system.state = y[system.flat_index].reshape(system.state_shape)
             func(t, *args)
-            return self.dot
+            return self.dot.ravel()
         return wrapper
 
     def set_dot(self, time, *args):
