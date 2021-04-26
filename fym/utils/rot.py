@@ -57,7 +57,7 @@ def angle2quat(yaw, pitch, roll):
 
 
 def quat2angle(quat):
-    """Output: yaw, pitch, roll"""
+    """Output : yaw, pitch, roll"""
     qin = (quat / nla.norm(quat)).squeeze()
 
     r11 = 2 * (qin[1] * qin[2] + qin[0] * qin[3])
@@ -84,3 +84,10 @@ def velocity2polar(vel):
     chi = np.arctan2(vel[1], vel[0])
     gamma = np.arcsin(- vel[2] / norm)
     return np.array([norm, chi, gamma])
+
+
+def dcm2euler(R):
+    """Defualt Ouput Order: yaw, pitch, roll"""
+
+    return quat2angle(dcm2quat(R))
+
