@@ -81,8 +81,8 @@ def angle2dcm(a1, a2, a3):
 
 def velocity2polar(vel):
     norm = sla.norm(vel)
-    chi = np.arctan2(vel[1], vel[0])
-    gamma = np.arcsin(- vel[2] / norm)
+    chi = np.arctan2(vel[1], vel[0]).squeeze()
+    gamma = np.arcsin(- vel[2] / norm).squeeze()
     return np.array([norm, chi, gamma])
 
 
