@@ -1,6 +1,5 @@
+"""DEPRECATED"""
 import numpy as np
-import gym
-from gym import spaces
 from fym.models.two_wheels_robot import TwoWheelsRobot3Dof
 from fym.core import BaseEnv
 
@@ -9,24 +8,13 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
     def __init__(self, initial_state, dt=0.01):
         two_wheels_robot = TwoWheelsRobot3Dof(initial_state=initial_state)
 
-        obs_sp = gym.spaces.Box(
-            low=np.array([-np.inf, -np.inf, -np.inf, -np.inf]),
-            high=np.array([np.inf, np.inf, np.inf, np.inf]),
-            dtype=np.float32,
-        )
-        act_sp = gym.spaces.Box(
-            low=np.array([-1.87, -1.87]),
-            high=np.array([1.87, 1.87]),
-            dtype=np.float32,
-        )
-        super().__init__(systems=[two_wheels_robot], dt=dt, obs_sp=obs_sp, act_sp=act_sp)
+        super().__init__(systems=[two_wheels_robot], dt=dt)
 
     def reset(self, noise=0):
         super().reset()
         return self.get_ob()
 
     def step(self, action):
-        lb, ub = self.action_space.low, self.action_space.high
         control = np.asarray(action)
         controls = dict(two_wheels_robot=control)
         states = self.states.copy()

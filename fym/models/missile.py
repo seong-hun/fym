@@ -1,5 +1,3 @@
-import gym
-from gym import spaces
 import numpy as np
 
 from fym.core import BaseSystem
@@ -12,23 +10,17 @@ class MissilePlanar(BaseSystem):
     t1 = 1.5
     t2 = 8.5
     name = 'missile'
-    control_size = 1  # latax. 
-    state_lower_bound = [-np.inf, -np.inf, -np.inf, -np.inf],
-    state_upper_bound = [np.inf, np.inf, np.inf, np.inf],
-    control_lower_bound = [-10*g],
-    control_upper_bound = [10*g],
 
     def __init__(self, initial_state):
-        super().__init__(self.name, initial_state, self.control_size)
+        super().__init__(initial_state)
 
     def external(self, states, controls):
-        state = states['missile']
         return 0
         # return {"wind" : [(0, 0), (0, 0)]} # no external effects
 
     def deriv(self, state, t, control, external):
         # state and (control) input
-        x, y, V, gamma, = state
+        x, y, V, gamma, = state.ravel()
         a = control
         # temperature
         if y <= 11000:
@@ -48,14 +40,14 @@ class MissilePlanar(BaseSystem):
             m = 90.035
             T = 0
         # density and dynamic pressure
-        rho = (1.15579 - 1.058*1e-4*y + 3.725*1e-9*y**2 
-               -6.0*1e-14*y**3)      # y in [0, 20000]
+        rho = (1.15579 - 1.058*1e-4*y + 3.725*1e-9*y**2
+               - 6.0*1e-14*y**3)      # y in [0, 20000]
         Q = 0.5*rho*V**2
         # Drag model
         if M < 0.93:
             Cd0 = 0.02
         elif M < 1.03:
-            Cd0 = 0.02 +0.2*(M - 0.93)
+            Cd0 = 0.02 + 0.2*(M - 0.93)
         elif M < 1.10:
             Cd0 = 0.04 + 0.06*(M - 1.03)
         else:
@@ -75,4 +67,4 @@ class MissilePlanar(BaseSystem):
         dVdt = (T - D)/m - self.g*np.sin(gamma)
         dgammadt = (a - self.g*np.cos(gamma))/V
 
-        return np.hstack([dxdt, dydt, dVdt, dgammadt])
+        return np.vstack([dxdt, dydt, dVdt, dgammadt])
