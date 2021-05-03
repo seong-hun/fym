@@ -347,9 +347,9 @@ class MorphingLon(BaseSystem, MorphingPlane):
         """Get the state derivative for given (x, u)"""
         self._check_control(u)
 
-        V, alpha, q, gamma = x
-        delt, dele = u
-        eta1, eta2 = eta
+        V, alpha, q, gamma = x.ravel()
+        delt, dele = u.ravel()
+        eta1, eta2 = eta.ravel()
 
         S, cbar, Tmax = self.S, self.cbar, self.Tmax
         m, g = self.mass, self.g
@@ -468,7 +468,7 @@ class TransportLinearLongitudinal(BaseSystem):
         [0, 0]
     ])
     cp = np.array([
-        [0, 0, 57.2958, 0, 0, 0],
+        [0, 0, 57.2958, 0, 0, 0, 0],
         [0, 0, 0, 57.2958, 0, 0, 0]
     ])
 
