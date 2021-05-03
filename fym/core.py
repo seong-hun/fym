@@ -125,6 +125,17 @@ class BaseEnv(gym.Env):
             system.state = state[system.flat_index].reshape(system.state_shape)
 
     @property
+    def initial_state(self):
+        res = [system.intial_state.reshape(-1, 1) for system in self.systems]
+        return np.vstack(res) if res != [] else []
+
+    @initial_state.setter
+    def initial_state(self, state):
+        for system in self.systems:
+            initial_state = state[system.flat_index].reshape(system.state_shape)
+            system.initial_state = initial_state
+
+    @property
     def dot(self):
         dot = []
         for system in self.systems:
