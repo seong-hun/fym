@@ -7,12 +7,10 @@ from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 import tqdm
 
-import gym
-
 import fym.logging as logging
 
 
-class BaseEnv(gym.Env):
+class BaseEnv:
     def __init__(self, dt=0.01, max_t=1, eager_stop=None,
                  logger=None, logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
@@ -27,16 +25,6 @@ class BaseEnv(gym.Env):
         self.indexing()
 
         self.eager_stop = eager_stop
-
-        if not hasattr(self, 'observation_space'):
-            self.set_obs_space()
-            print(
-                "Observation space is inferred using the initial states "
-                f"of the systems: {self._systems.keys()}"
-            )
-
-        if not hasattr(self, 'action_space'):
-            raise NotImplementedError('The action_space is not defined.')
 
         if not isinstance(ode_step_len, int):
             raise ValueError("ode_step_len should be integer.")
@@ -84,7 +72,6 @@ class BaseEnv(gym.Env):
                 value._name = name
             # if isinstance(value, BaseSystem):
             self.indexing()
-            self.set_obs_space()
         elif isinstance(value, Delay):
             delays = self.__dict__.get("_delays")
             if delays is None:
@@ -93,9 +80,6 @@ class BaseEnv(gym.Env):
             delays[name] = value
         else:
             super().__setattr__(name, value)
-
-    def set_obs_space(self):
-        self.observation_space = infinite_box(self.state_shape)
 
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
@@ -494,19 +478,6 @@ def deep_flatten(arg):
         return deep_flatten(arg[0]) + deep_flatten(arg[1:])
     elif isinstance(arg, (np.ndarray, float, int)):
         return [np.asarray(arg).ravel()]
-
-
-def infinite_box(shape):
-    return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float64)
-
-
-def infer_obs_space(obj):
-    """
-    Infer the gym observation space from the ordered dictionary ``systems``,
-    and return a gym.spaces.Dict
-    """
-    obs_space = infinite_box(obj.state_shape)
-    return obs_space
 
 
 def rk4(func, y0, t, args=()):

@@ -1,6 +1,5 @@
+"""DEPRECATED"""
 import numpy as np
-import gym
-from gym import spaces
 
 from fym.models.aircraft import Aircraft3Dof
 from fym.core import BaseEnv
@@ -31,18 +30,7 @@ class DynamicSoaringEnv(BaseEnv):
         wind = Wind(Wref, href, h0)
         aircraft = Aircraft3Dof(initial_state=initial_state, wind=wind)
 
-        obs_sp = gym.spaces.Box(
-            low=np.array([-np.inf, -np.inf, -np.inf, -np.inf]),
-            high=np.array([np.inf, np.inf, np.inf, np.inf]),
-            dtype=np.float32,
-        )
-        act_sp = gym.spaces.Box(
-            low=np.array([-np.inf, -np.inf]),
-            high=np.array([-np.inf, -np.inf]),
-            dtype=np.float32,
-        )
-
-        super().__init__(systems=[aircraft], dt=dt, obs_sp=obs_sp, act_sp=act_sp)
+        super().__init__(systems=[aircraft])
 
     def reset(self, noise=0):
         super().reset()

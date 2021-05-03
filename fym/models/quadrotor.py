@@ -1,5 +1,3 @@
-import gym
-from gym import spaces
 import numpy as np
 
 from fym.core import BaseEnv, BaseSystem
