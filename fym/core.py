@@ -235,7 +235,9 @@ class BaseEnv:
             else:
                 for i, (t, y) in enumerate(zip(t_hist[:-1], ode_hist[:-1])):
                     self.logger.record(
-                        **self.logger_callback(i, t, y, t_hist, ode_hist))
+                        **self.logger_callback(
+                            t=t, y=y, i=i, t_hist=t_hist, ode_hist=ode_hist,
+                            **kwargs))
 
         self.clock.set(tfinal)
 
