@@ -92,6 +92,7 @@ def dcm2angle(dcm):
 
 
 def velocity2polar(vel):
+    vel = vel.ravel()
     norm = sla.norm(vel)
     chi = np.arctan2(vel[1], vel[0])
     gamma = np.arcsin(- vel[2] / norm)

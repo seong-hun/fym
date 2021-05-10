@@ -110,7 +110,7 @@ class BaseEnv:
 
     @property
     def initial_state(self):
-        res = [system.intial_state.reshape(-1, 1) for system in self.systems]
+        res = [system.initial_state.reshape(-1, 1) for system in self.systems]
         return np.vstack(res) if res != [] else []
 
     @initial_state.setter
