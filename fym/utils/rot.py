@@ -4,35 +4,34 @@ import numpy as np
 from numpy import sin, cos
 
 
-"""Variables
-quat:
-    unit quaternion representing the attitude of b (body) w.r.t. i (inertial) frame.
-dcm:
-    Direction Cosine Matrix (DCM) from i to b, corresponding to `quat`. Notationally, C_{b/i}.
-angle = [psi, theta, phi] or [yaw, pitch, roll]:
-    Euler angles corresponding to ZYX (Z first applied) rotation. Also corresponding to `quat`.
 """
+Variables:
+    - quat:
+        unit quaternion representing the attitude of b (body) w.r.t. i (inertial) frame.
+    - dcm:
+        - Direction Cosine Matrix (DCM) from i to b. Notationally, C_{b/i}.
+    - angle = [psi, theta, phi] or [yaw, pitch, roll]:
+        Euler angles corresponding to ZYX (Z first applied) rotation.
 
-"""Notes
-quat dynamics [1]:
-    eps = 1 - (quat[0]**2+quat[1]**2+quat[2]**2+quat[3]**2)
-    k = 1
-    dquat = 0.5 * np.array([[0., -_w[0], -_w[1], -_w[2]],
-                                 [_w[0], 0., _w[2], -_w[1]],
-                                 [_w[1], -_w[2], 0., _w[0]],
-                                 [_w[2], _w[1], -_w[0], 0.]]).dot(quat) + k*eps*quat
-dcm dynamics [2, modified]:
-    ddcm = -skew(omega) @ dcm
-    where skew(a) @ b = a x b for three dimensional vectors a and b (cross product)
-"""
+Notes:
+    - quat dynamics [1]:
+        eps = 1 - (quat[0]**2+quat[1]**2+quat[2]**2+quat[3]**2)
+        k = 1
+        dquat = 0.5 * np.array([[0., -p, -q, -r],
+                                     [p, 0., r, -q],
+                                     [q, -r, 0., p],
+                                     [r, q, -p, 0.]]).dot(quat) + k*eps*quat
+    - dcm dynamics [2, modified]:
+        ddcm = -skew(omega) @ dcm
+        where skew(a) @ b = a x b for three dimensional vectors a and b (cross product)
 
-"""References
-[1] MATLAB Aerospace Blockset,
-https://kr.mathworks.com/help/aeroblks/6dofquaternion.html#mw_f692de78-a895-4edc-a4a7-118228165a58
-[2] T. Lee, M. Leok, and N. H. McClamroch,
-“Geometric tracking control of a quadrotor UAV on SE(3),”
-in 49th IEEE Conference on Decision and Control (CDC), Atlanta, GA, Dec. 2010, pp. 5420–5425.
-doi: 10.1109/CDC.2010.5717652.
+References:
+    - [1] MATLAB Aerospace Blockset,
+    https://kr.mathworks.com/help/aeroblks/6dofquaternion.html#mw_f692de78-a895-4edc-a4a7-118228165a58
+    - [2] T. Lee, M. Leok, and N. H. McClamroch,
+    “Geometric tracking control of a quadrotor UAV on SE(3),”
+    in 49th IEEE Conference on Decision and Control (CDC), Atlanta, GA, Dec. 2010, pp. 5420–5425.
+    doi: 10.1109/CDC.2010.5717652.
 """
 
 
