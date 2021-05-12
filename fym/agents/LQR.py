@@ -3,23 +3,33 @@ import scipy.linalg as lin
 import numpy.linalg as nla
 
 
-def clqr(a: np.array, b: np.array, q: np.array, r: np.array) \
+def clqr(A: np.array, B: np.array, Q: np.array, R: np.array, with_eigs=False) \
         -> np.array:
-    x = lin.solve_continuous_are(a, b, q, r)
-    if np.size(r) == 1:
-        k = (np.transpose(b).dot(x)) / r
+    P = lin.solve_continuous_are(A, B, Q, R)
+    if np.size(R) == 1:
+        K = (np.transpose(B).dot(P)) / R
     else:
-        k = nla.inv(r).dot((np.transpose(b).dot(x)))
-    eig_vals, eig_vecs = nla.eig(a - b.dot(k))
-    return k, x, eig_vals, eig_vecs
+        K = nla.inv(R).dot((np.transpose(B).dot(P)))
+
+    eig_vals, eig_vecs = nla.eig(A - B.dot(K))
+
+    if with_eigs:
+        return K, P, eig_vals, eig_vecs
+    else:
+        return K, P
 
 
-def dlqr(a: np.array, b: np.array, q: np.array, r: np.array) \
+def dlqr(A: np.array, B: np.array, Q: np.array, R: np.array, with_eigs=False) \
         -> np.array:
-    x = lin.solve_discrete_are(a, b, q, r)
-    if np.size(r) == 1:
-        k = (np.transpose(b).dot(x)) / r
+    P = lin.solve_discrete_are(A, B, Q, R)
+    if np.size(R) == 1:
+        K = (np.transpose(B).dot(P)) / R
     else:
-        k = nla.inv(r).dot((np.transpose(b).dot(x)))
-    eig_vals, eig_vecs = nla.eig(a - b.dot(k))
-    return k, x, eig_vals, eig_vecs
+        K = nla.inv(R).dot((np.transpose(B).dot(P)))
+
+    eig_vals, eig_vecs = nla.eig(A - B.dot(K))
+
+    if with_eigs:
+        return K, P, eig_vals, eig_vecs
+    else:
+        return K, P

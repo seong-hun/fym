@@ -1,6 +1,3 @@
-import gym
-from gym import spaces
-
 import numpy as np
 import numpy.linalg as nla
 from numpy import cos, sin
@@ -21,14 +18,9 @@ class Aircraft3Dof(BaseSystem):
     CD0 = 0.033
     CD1 = 0.017
     name = 'aircraft'
-    control_size = 2  # CL, phi
-    state_lower_bound = [-np.inf, -np.inf, -np.inf, 3, -np.inf, -np.inf]
-    state_upper_bound = [np.inf, np.inf, -0.01, np.inf, np.inf, np.inf]
-    control_lower_bound = [-0.5, np.deg2rad(-70)]
-    control_upper_bound = [1.5, np.deg2rad(70)]
 
     def __init__(self, initial_state, wind):
-        super().__init__(self.name, initial_state, self.control_size)
+        super().__init__(initial_state)
         self.wind = wind
         self.term1 = self.rho*self.S/2/self.m
 
@@ -43,8 +35,8 @@ class Aircraft3Dof(BaseSystem):
         return self._raw_deriv(state, t, raw_control, external)
 
     def _raw_deriv(self, state, t, control, external):
-        x, y, z, V, gamma, psi = state
-        CD, CL, phi = control
+        x, y, z, V, gamma, psi = state.ravel()
+        CD, CL, phi = control()
         (_, Wy, _), (_, (_, _, dWydz), _) = external['wind']
 
         dxdt = V*np.cos(gamma)*np.cos(psi)
@@ -60,7 +52,7 @@ class Aircraft3Dof(BaseSystem):
         dpsidt = (self.term1*V/np.cos(gamma)*CL*np.sin(phi)
                   - dWydt*np.cos(psi)/V/np.cos(gamma))
 
-        return np.array([dxdt, dydt, dzdt, dVdt, dgammadt, dpsidt])
+        return np.vstack([dxdt, dydt, dzdt, dVdt, dgammadt, dpsidt])
 
 
 class F16LinearLateral(BaseSystem):
@@ -68,6 +60,13 @@ class F16LinearLateral(BaseSystem):
     Reference:
         B. L. Stevens et al. "Aircraft Control and Simulation", 3/e, 2016
         Example 5.3-1: LQR Design for F-16 Lateral Regulator
+    Dynamics:
+        x_dot = Ax + Bu
+    State:
+        x = [beta, phi, p, r, del_a, del_r, x_w]
+        beta, phi: [rad], p, r: [rad/s], del_a, del_r: [deg]
+    Control input:
+        u = [u_a, u_r]  (aileron and rudder servo inputs, [deg])
     """
     A = np.array([
         [-0.322, 0.064, 0.0364, -0.9917, 0.0003, 0.0008, 0],
@@ -162,18 +161,10 @@ class MorphingPlane(BaseEnv):
     )
 
     def __init__(self, velocity, omega, quaternion, position):
-        self.vel = BaseSystem(velocity, name="velocity")
-        self.omega = BaseSystem(omega, name="omega")
-        self.quat = BaseSystem(quaternion, name="quaternion")
-        self.pos = BaseSystem(position, name="position")
-        super().__init__(
-            systems_dict={
-                "velocity": self.vel,
-                "omega": self.omega,
-                "quaternion": self.quat,
-                "position": self.pos,
-            }
-        )
+        self.vel = BaseSystem(velocity, name="velocity")  # 3x1
+        self.omega = BaseSystem(omega, name="omega")  # 3x1
+        self.quat = BaseSystem(quaternion, name="quaternion")  # 4x1
+        self.pos = BaseSystem(position, name="position")  # 3x1
 
     def J(self, eta1, eta2):
         J_temp = self.J_template
@@ -323,18 +314,34 @@ def get_rho(altitude):
 
 
 class MorphingLon(BaseSystem, MorphingPlane):
+    """
+    This is a nonlinear simulator of morphing aircraft only considering
+    the longitudinal dynamics for reduced computational burden.
+
+    state (x)   : 4x1 vector of (V, alpha, q, gamma)
+    control (u) : 2x1 vector of (delt, dele)
+    morph (eta) : 2x1 vector of (eta1, eta2)
+    """
     rho = get_rho(300)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, init_state=None):
+        if init_state is None:
+            init_state, *_ = self.get_trim(verbose=True)
+
+        super().__init__(init_state)
+
         self.limits = np.vstack([
             self.control_limits[k]
             for k in ("delt", "dele", "eta1", "eta2")
-        ]).T
+        ])[:, None].transpose(2, 0, 1)
 
-    def deriv(self, x, u):
-        V, alpha, q, gamma = x
-        delt, dele, eta1, eta2 = u
+    def deriv(self, x, u, eta):
+        """Get the state derivative for given (x, u)"""
+        self._check_control(u)
+
+        V, alpha, q, gamma = x.ravel()
+        delt, dele = u.ravel()
+        eta1, eta2 = eta.ravel()
 
         S, cbar, Tmax = self.S, self.cbar, self.Tmax
         m, g = self.mass, self.g
@@ -351,26 +358,38 @@ class MorphingLon(BaseSystem, MorphingPlane):
         dq = M / Iy
         dgamma = 1 / (m * V) * (L + T * sin(alpha) - m * g * cos(gamma))
 
-        return np.hstack((dV, dalpha, dq, dgamma))
+        return np.vstack((dV, dalpha, dq, dgamma))
+
+    def _check_control(self, u):
+        tlim = self.control_limits["delt"]
+        elim = self.control_limits["dele"]
+
+        if tlim[0] > u[0] or tlim[1] < u[0]:
+            print("WARN: thrust is over the limits")
+
+        if elim[0] > u[1] or elim[1] < u[1]:
+            print("WARN: elevator is over the limits")
 
     def _trim_cost(self, z, fixed):
-        x, u = self._trim_convert(z, fixed)
-        dxs = self.deriv(x, u)
-        weight = np.diag([1, 1, 1000, 1])
-        return dxs.dot(weight).dot(dxs)
+        x, u, eta = self._trim_convert(z, fixed)
+        dxs = self.deriv(x, u, eta)
+        weight = np.diag([1, 1, 100, 1])
+        return dxs.T.dot(weight).dot(dxs)[0][0]
 
     def _trim_convert(self, z, fixed):
         V, _, (eta1, eta2) = fixed
         alpha, delt, dele = z
         q, gamma = 0, 0
 
-        x = np.array([V, alpha, q, gamma])
-        u = np.array([delt, dele, eta1, eta2])
-        return x, u
+        x = np.vstack([V, alpha, q, gamma])
+        u = np.vstack([delt, dele])
+        eta = np.vstack([eta1, eta2])
+        return x, u, eta
 
-    def get_trim(self, z0={"alpha": 0.1, "delt": 0.13, "dele": 0},
+    def get_trim(self, z0={"alpha": 0.1, "delt": 0.19, "dele": 0},
                  fixed={"V": 20, "h": 300, "eta": (0.5, 0.5)},
-                 method="SLSQP", options={"disp": False, "ftol": 1e-10}):
+                 method="SLSQP", options={"disp": False, "ftol": 1e-10},
+                 verbose=False):
         z0 = list(z0.values())
         fixed = list(fixed.values())
         bounds = (
@@ -382,7 +401,130 @@ class MorphingLon(BaseSystem, MorphingPlane):
             self._trim_cost, z0, args=(fixed,),
             bounds=bounds, method=method, options=options)
 
-        return self._trim_convert(result.x, fixed)
+        x, u, eta = self._trim_convert(result.x, fixed)
+        dx = self.deriv(x, u, eta)
+
+        if verbose:
+            print("=========================================")
+            print("               Trim point                ")
+            print("               ----------                ")
+            print("VT:   {:5.2f} [m/s]    AOA:   {:5.2f} [deg]".format(
+                x[0, 0], x[1, 0] * np.rad2deg(1)))
+            print("Q:    {:5.2f} [deg/s]  Gamma: {:5.2f} [deg]".format(
+                x[2, 0] * np.rad2deg(1), x[3, 0] * np.rad2deg(1)))
+            print("delt: {:5.2f} [ ]      dele:  {:5.2f} [deg]".format(
+                u[0, 0], u[1, 0] * np.rad2deg(1)))
+            print("eta1: {:5.2f} [ ]      eta2:  {:5.2f} [ ]".format(
+                eta[0, 0], eta[1, 0]))
+
+            print("")
+            print("               Derivatives               ")
+            print("               -----------               ")
+            print("VT:  {:9.2e} [m/s]    AOA:   {:9.2e} [deg]".format(
+                dx[0, 0], dx[1, 0] * np.rad2deg(1)))
+            print("Q:   {:9.2e} [deg/s]  Gamma: {:9.2e} [deg]".format(
+                dx[2, 0] * np.rad2deg(1), dx[3, 0] * np.rad2deg(1)))
+            print("             (Norm: {:5.2e})".format(np.linalg.norm(dx)))
+            print("=========================================")
+
+        return x, u, eta
 
     def saturation(self, u):
-        return np.clip(u, *self.limits)
+        limits = np.vstack([
+            self.control_limits[k]
+            for k in ("delt", "dele", "eta1", "eta2")
+        ])
+        return np.clip(u, *limits.T)
+
+
+class TransportLinearLongitudinal(BaseSystem):
+    """
+    Reference:
+        B. L. Stevens et al. "Aircraft Control and Simulation", 3/e, 2016
+        Example 4.6-4: Longitudinal Control for Automatic Landing
+    """
+    ap = np.array([
+        [-0.038580, 18.984, -32.139, 0, 1.3233E-4, 0],
+        [-0.0010280, -0.63253, 0.0056129, 1.0, 3.7553E-6, 0],
+        [0, 0, 0, 1.0, 0, 0],
+        [7.8601E-5, -0.75905, -0.00079341, -0.51830, -3.0808E-7, 0],
+        [-0.043620, -249.76, 249.76, 0, 0, 0],
+        [0, -250.00, 250.00, 0, 0, 0]
+    ])
+    bp = np.array([
+        [10.100, 0],
+        [-1.5446E-4, 0],
+        [0, 0],
+        [0.024656, -0.010770],
+        [0, 0],
+        [0, 0]
+    ])
+    cp = np.array([
+        [0, 0, 57.2958, 0, 0, 0, 0],
+        [0, 0, 0, 57.2958, 0, 0, 0]
+    ])
+
+    def __init__(self, initial_state=[1, 0, 0, 0, 0, 0, 0]):
+        super().__init__(initial_state)
+
+    def deriv(self, x, u):
+        return self.ap.dot(x) + self.bp.dot(u)
+
+
+class TransportAugLinear(BaseSystem):
+    """
+    Reference:
+        B. L. Stevens et al. "Aircraft Control and Simulation", 3/e, 2016
+        Example 5.5-5: Glide-Slope Coupler
+    """
+    A = np.array([
+        [-0.04, 19.0096, -32.1689, 0, 0, 10.1, 0, 0, 0, 0],
+        [-0.001, -0.64627, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, -0.7739, 0, -0.529765, 0, 0.02463, -0.011, 0, 0, 0],
+        [0, -250, 250, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, -0.2, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, -10, 0, 0, 0],
+        [-1, 0, 0, 0, 0, 0, 0, -5, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, -10, 1],
+        [0, 0, 0, 0, -1, 0, 0, 0, 0, 0]
+    ])
+    B = np.array([
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, -4.3633],
+        [0.2, 0, 0],
+        [0, 10, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+    ])
+    C = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 57.2958, 0, 0, 0, 0, 0, 0],
+        [0, 0, 57.2958, 0, 0, 0, 0, 0, 0, 0],
+        [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, -1, 0, 0, 0, 0, 0]
+    ])
+    G = np.array([
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [0, 0],
+        [1, 0],
+        [0, 0],
+        [0, 1],
+    ])
+
+    def __init__(self, initial_state=[1, 0, 0, 0, 0, 0, 0, 0, 0, 0]):
+        super().__init__(initial_state)
+
+    def deriv(self, x, u):
+        return self.A.dot(x) + self.B.dot(u) + self.G.dot(np.array([0, 0]))

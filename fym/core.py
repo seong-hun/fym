@@ -7,30 +7,24 @@ from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 import tqdm
 
-import gym
-
 import fym.logging as logging
 
 
-class BaseEnv(gym.Env):
+class BaseEnv:
     def __init__(self, dt=0.01, max_t=1, eager_stop=None,
                  logger=None, logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
-        self.name = name or self.__class__.__name__
+        self._name = name or self.__class__.__name__
         self._systems = dict()
         self.systems = self._systems.values()
+
+        self._delays = dict()
+        self.delays = self._delays.values()
+
+        self.indexing()
+
         self.eager_stop = eager_stop
-
-        if not hasattr(self, 'observation_space'):
-            self.set_obs_space()
-            print(
-                "Observation space is inferred using the initial states "
-                f"of the systems: {self._systems.keys()}"
-            )
-
-        if not hasattr(self, 'action_space'):
-            raise NotImplementedError('The action_space is not defined.')
 
         if not isinstance(ode_step_len, int):
             raise ValueError("ode_step_len should be integer.")
@@ -38,7 +32,8 @@ class BaseEnv(gym.Env):
         self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
 
         self.logger = logger
-        self.logger_callback = logger_callback
+        if logger_callback is not None or not hasattr(self, "logger_callback"):
+            self.logger_callback = logger_callback
 
         # ODE Solver
         if solver == "odeint":
@@ -50,13 +45,16 @@ class BaseEnv(gym.Env):
         self.ode_option = ode_option
         self.tqdm_bar = None
 
-        self.delay = None
-
     def __getattr__(self, name):
         if "_systems" in self.__dict__:
             systems = self.__dict__["_systems"]
             if name in systems:
                 return systems[name]
+
+        if "_delays" in self.__dict__:
+            delays = self.__dict__["_delays"]
+            if name in delays:
+                return delays[name]
 
         return super().__getattribute__(name)
 
@@ -70,19 +68,21 @@ class BaseEnv(gym.Env):
                 raise AttributeError(
                     "cannot assign system before BaseEnv.__init__() call")
             systems[name] = value
-            if isinstance(value, BaseEnv) or value.name is None:
-                value.name = name
+            if isinstance(value, BaseEnv) or value._name is None:
+                value._name = name
             # if isinstance(value, BaseSystem):
             self.indexing()
-            self.set_obs_space()
+        elif isinstance(value, Delay):
+            delays = self.__dict__.get("_delays")
+            if delays is None:
+                raise AttributeError(
+                    "cannot assign delays before BaseEnv.__init__() call")
+            delays[name] = value
         else:
             super().__setattr__(name, value)
 
-    def set_obs_space(self):
-        self.observation_space = infinite_box(self.state_shape)
-
     def __repr__(self, base=[]):
-        name = self.name or self.__class__.__name__
+        name = self._name or self.__class__.__name__
         base = base + [name]
         # result = [
         #     f"<{' - '.join(base)}>",
@@ -101,7 +101,7 @@ class BaseEnv(gym.Env):
 
     @property
     def state(self):
-        return self.observe_flat()
+        return self.observe_vec()
 
     @state.setter
     def state(self, state):
@@ -109,8 +109,23 @@ class BaseEnv(gym.Env):
             system.state = state[system.flat_index].reshape(system.state_shape)
 
     @property
+    def initial_state(self):
+        res = [system.intial_state.reshape(-1, 1) for system in self.systems]
+        return np.vstack(res) if res != [] else []
+
+    @initial_state.setter
+    def initial_state(self, state):
+        for system in self.systems:
+            initial_state = state[system.flat_index].reshape(system.state_shape)
+            system.initial_state = initial_state
+
+    @property
     def dot(self):
-        return np.hstack([np.ravel(system.dot) for system in self.systems])
+        dot = []
+        for system in self.systems:
+            if system.dot is not None:
+                dot.append(np.reshape(system.dot, (-1, 1)))
+        return np.vstack(dot) if dot != [] else dot
 
     @dot.setter
     def dot(self, dot):
@@ -120,14 +135,14 @@ class BaseEnv(gym.Env):
     def indexing(self):
         start = 0
         for system in self.systems:
-            size = functools.reduce(lambda a, b: a * b, system.state_shape)
-            system.flat_index = slice(start, start + size)
-            start += size
+            system.state_size = functools.reduce(
+                lambda a, b: a * b, system.state_shape)
+            system.flat_index = slice(start, start + system.state_size)
+            start += system.state_size
 
         self.state_shape = (sum([
-            functools.reduce(lambda a, b: a * b, system.state_shape)
-            for system in self.systems
-        ]),)
+            system.state_size for system in self.systems
+        ]), 1)
 
     def reset(self):
         for system in self.systems:
@@ -168,18 +183,32 @@ class BaseEnv(gym.Env):
                     res[name] = system.observe_dict(state[system.flat_index])
         return res
 
-    def observe_flat(self):
-        return np.hstack([
-            system.state.ravel() for system in self.systems
-        ])
+    def observe_vec(self, state=None):
+        res = []
+        if state is None:
+            res = [system.state.reshape(-1, 1) for system in self.systems]
+        else:
+            for system in self.systems:
+                if isinstance(system, BaseSystem):
+                    res.append(state[system.flat_index].reshape(-1, 1))
+                elif isinstance(system, BaseEnv):
+                    res.append(system.observe_vec(state[system.flat_index]))
+        return np.vstack(res) if res != [] else []
 
-    def update(self, *args):
+    def observe_flat(self):
+        flat = []
+        for system in self.systems:
+            if system.state is not None:
+                flat.append(np.ravel(system.state))
+        return np.hstack(flat) if flat != [] else flat
+
+    def update(self, **kwargs):
         t_hist = self.clock.get_thist()
         ode_hist = self.solver(
             func=self.ode_func,
             y0=self.observe_flat(),
             t=t_hist,
-            args=args,
+            args=tuple(kwargs.values()),
             **self.ode_option
         )
 
@@ -192,16 +221,15 @@ class BaseEnv(gym.Env):
         for system in self.systems:
             system.state = yfinal[system.flat_index].reshape(system.state_shape)
 
+        self.update_delays(t_hist, ode_hist)
+
         # Log the inner history of states
         if self.logger:
             if not self.logger_callback:
                 for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                    state_dict = {
-                        name: y[system.flat_index].reshape(system.state_shape)
-                        for name, system in self._systems.items()
-                    }
-                    if args:
-                        self.logger.record(time=t, state=state_dict, args=args)
+                    state_dict = self.observe_dict(y)
+                    if kwargs:
+                        self.logger.record(time=t, state=state_dict, **kwargs)
                     else:
                         self.logger.record(time=t, state=state_dict)
             else:
@@ -211,10 +239,15 @@ class BaseEnv(gym.Env):
 
         self.clock.set(tfinal)
 
-        if self.delay:
-            self.delay.update(t_hist, ode_hist)
+        return t_hist, ode_hist, done or self.clock.time_over()
 
-        return t_hist, ode_hist, done
+    def update_delays(self, t_hist, ode_hist):
+        for delay in self.delays:
+            delay.update(t_hist, ode_hist)
+
+        for system in self.systems:
+            if isinstance(system, BaseEnv):
+                system.update_delays(t_hist, ode_hist)
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
@@ -222,7 +255,7 @@ class BaseEnv(gym.Env):
             for system in self.systems:
                 system.state = y[system.flat_index].reshape(system.state_shape)
             func(t, *args)
-            return self.dot
+            return self.dot.ravel()
         return wrapper
 
     def set_dot(self, time, *args):
@@ -272,19 +305,20 @@ class BaseEnv(gym.Env):
             if desc:
                 self.tqdm_bar.set_description(desc)
 
-    def set_delay(self, systems: list, T):
-        self.delay = Delay(self.clock, systems, T)
-
 
 class BaseSystem:
-    def __init__(self, initial_state, name=None):
+    def __init__(self, initial_state=None, shape=(1, 1), name=None):
+        if initial_state is None:
+            initial_state = np.zeros(shape)
         self.initial_state = initial_state
-        self.state = self.initial_state
+        # self.state = self.initial_state
         self.state_shape = self.initial_state.shape
-        self.name = name
+        self._name = name
+
+        self.has_delay = False
 
     def __repr__(self, base=[]):
-        name = self.name or self.__class__.__name__
+        name = self._name or self.__class__.__name__
         base = base + [name]
         result = [
             f"<{' - '.join(base)}>",
@@ -325,6 +359,26 @@ class BaseSystem:
         self.state = self.initial_state
         return self.state
 
+    def set_delay(self, T):
+        self.delay = Delay(self, T)
+        self.has_delay = True
+
+    def update_delays(self, t_hist, ode_hist):
+        if self.has_delay:
+            self.delay.update(t_hist, ode_hist)
+
+
+class Sequential(BaseEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        for arg in args:
+            assert isinstance(arg, (BaseEnv, BaseSystem))
+            setattr(self, arg.name, arg)
+
+        for k, v in kwargs.items():
+            assert isinstance(v, (BaseEnv, BaseSystem))
+            setattr(self, k, v)
+
 
 class Clock:
     def __init__(self, dt, ode_step_len, max_t=10):
@@ -333,8 +387,9 @@ class Clock:
         self.max_len = int(max_t / dt) + 1
         self.thist = np.linspace(0, dt, ode_step_len + 1)
 
-    def reset(self):
-        self.t = 0
+    def reset(self, t=0.):
+        self.t = t
+        self.max_len = int((self.max_t - t) / self.dt) + 1
 
     def tick(self):
         self.t += self.dt
@@ -364,37 +419,36 @@ class Clock:
 
 
 class Delay:
-    def __init__(self, clock, systems: list, T, fill_value="extrapolate"):
-        if clock.dt > T:
-            raise ValueError("Time step should be smaller than the delay")
-
-        self.clock = clock
-        self.systems = systems
+    def __init__(self, system, T, fill_value="extrapolate"):
+        self.system = system
         self.T = T
         self.fill_value = fill_value
 
         self.memory = []
+        self.memory_dump = None
 
-    def available(self):
-        return self.clock.get() >= self.T
+    def available(self, t):
+        return t >= self.T
 
-    def set_states(self, time):
-        if time > self.memory_dump.x[-1] + self.T:
-            fit = self.memory[0]
+    def get(self, t):
+        if self.memory_dump is not None:
+            if t > self.memory_dump.x[-1] + self.T:
+                fit = self.memory[0]
+            else:
+                fit = self.memory_dump
+
+            y = fit(t - self.T)
+
+            return y[self.system.flat_index].reshape(self.system.state_shape)
         else:
-            fit = self.memory_dump
-
-        y = fit(time - self.T)
-
-        for system in self.systems:
-            system.d_state = y[system.flat_index].reshape(system.state_shape)
+            return self.system.state
 
     def update(self, t_hist, state_hist):
         self.memory.append(
             interp1d(t_hist, state_hist, axis=0, fill_value=self.fill_value)
         )
 
-        if self.clock.get() >= self.T:
+        if t_hist[-1] >= self.T:
             self.memory_dump = self.memory.pop(0)
 
 
@@ -424,19 +478,6 @@ def deep_flatten(arg):
         return deep_flatten(arg[0]) + deep_flatten(arg[1:])
     elif isinstance(arg, (np.ndarray, float, int)):
         return [np.asarray(arg).ravel()]
-
-
-def infinite_box(shape):
-    return gym.spaces.Box(-np.inf, np.inf, shape=shape, dtype=np.float64)
-
-
-def infer_obs_space(obj):
-    """
-    Infer the gym observation space from the ordered dictionary ``systems``,
-    and return a gym.spaces.Dict
-    """
-    obs_space = infinite_box(obj.state_shape)
-    return obs_space
 
 
 def rk4(func, y0, t, args=()):
