@@ -97,9 +97,3 @@ def velocity2polar(vel):
     gamma = np.arcsin(- vel[2] / norm).squeeze()
     return np.array([norm, chi, gamma])
 
-
-def dcm2angle(R):
-    """Defualt Ouput Order: yaw, pitch, roll"""
-
-    return quat2angle(dcm2quat(R))
-
