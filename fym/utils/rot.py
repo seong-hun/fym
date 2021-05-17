@@ -4,6 +4,9 @@ import numpy as np
 from numpy import sin, cos
 
 
+"""DCM: C_{b/i}"""
+
+
 def quat2dcm(q):
     q = np.squeeze(q)
     q0, q1, q2, q3 = q / nla.norm(q)
@@ -69,14 +72,23 @@ def quat2angle(quat):
     return np.arctan2(r11, r12), np.arcsin(r21), np.arctan2(r31, r32)
 
 
-def angle2dcm(a1, a2, a3):
+def angle2dcm(psi, theta, phi):
     return np.array([
-        [cos(a2) * cos(a1), cos(a2) * sin(a1), - sin(a2)],
-        [- cos(a3) * sin(a1) + sin(a3) * sin(a2) * cos(a1),
-         cos(a3) * cos(a1) + sin(a3) * sin(a2) * sin(a1), sin(a3) * cos(a2)],
-        [sin(a3) * sin(a1) + cos(a3) * sin(a2) * cos(a1),
-         - sin(a3) * cos(a1) + cos(a3) * sin(a2) * sin(a1), cos(a3) * cos(a2)]
+        [cos(theta) * cos(psi), cos(theta) * sin(psi), - sin(theta)],
+        [- cos(phi) * sin(psi) + sin(phi) * sin(theta) * cos(psi),
+         cos(phi) * cos(psi) + sin(phi) * sin(theta) * sin(psi),
+         sin(phi) * cos(theta)],
+        [sin(phi) * sin(psi) + cos(phi) * sin(theta) * cos(psi),
+         - sin(phi) * cos(psi) + cos(phi) * sin(theta) * sin(psi),
+         cos(phi) * cos(theta)]
     ])
+
+
+def dcm2angle(dcm):
+    phi = np.arctan2(dcm[1, 2], dcm[2, 2])
+    theta = - np.arcsin(dcm[0, 2])
+    psi = np.arctan2(dcm[0, 1], dcm[0, 0])
+    return psi, theta, phi
 
 
 def velocity2polar(vel):

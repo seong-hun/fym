@@ -1,8 +1,7 @@
+"""DEPRECATED"""
 import numpy as np
 import numpy.linalg as nla
 import scipy.linalg as sla
-
-from gym import spaces
 
 from fym.core import BaseEnv, BaseSystem, infinite_box
 import fym.logging as logging
@@ -156,14 +155,6 @@ class CmracEnv(MracEnv):
             ),
         }
         self.append_systems(new_systems)
-
-        M_shape = self.systems["adaptive_system"].state_shape[:1] * 2
-        N_shape = self.systems["adaptive_system"].state_shape
-
-        self.action_space = spaces.Dict({
-            "M": infinite_box(M_shape),
-            "N": infinite_box(N_shape)
-        })
 
     def reset(self):
         states = super().reset()

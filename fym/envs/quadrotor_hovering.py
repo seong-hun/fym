@@ -1,7 +1,6 @@
+"""DEPRECATED"""
 import numpy as np
 import numpy.linalg as nla
-import gym
-from gym import spaces
 from scipy.spatial.transform import Rotation as R
 
 from fym.models.quadrotor import Quadrotor
@@ -25,20 +24,8 @@ class QuadrotorHoveringEnv(BaseEnv):
     def __init__(self, initial_state, dt=0.01):
         quadrotor = Quadrotor(initial_state=initial_state)
 
-        obs_sp = gym.spaces.Box(
-            low=-np.full(6, np.inf),
-            high=np.full(6, np.inf),
-            dtype=np.float32,
-        )
-        act_sp = gym.spaces.Box(
-            low=-np.full(4, np.inf),
-            high=np.full(4, np.inf),
-            dtype=np.float32,
-        )
+        super().__init__(systems=[quadrotor], dt=dt)
 
-        super().__init__(systems=[quadrotor], dt=dt,
-                         obs_sp=obs_sp, act_sp=act_sp)
-        
     def reset(self, noise=0):
         super().reset()
         self.states['quadrotor'] += np.random.uniform(-noise, noise)
@@ -55,9 +42,9 @@ class QuadrotorHoveringEnv(BaseEnv):
         f1234_sum = self.pid_height.get(-e_y[0]) + quad.m * quad.g
         f31_diff = self.pid_pitch.get(e_y[1])
         f24_diff = self.pid_roll.get(e_y[2])
-    
-        quadrotor_control \
-                = self.allocation_matrix.dot([f24_diff, f31_diff, f1234_sum, 0])
+
+        quadrotor_control = self.allocation_matrix.dot(
+            [f24_diff, f31_diff, f1234_sum, 0])
         controls = dict(quadrotor=quadrotor_control)
         # ----------------------------------------------------------------------
 

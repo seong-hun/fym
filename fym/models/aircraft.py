@@ -1,6 +1,3 @@
-import gym
-from gym import spaces
-
 import numpy as np
 import numpy.linalg as nla
 from numpy import cos, sin
@@ -21,14 +18,9 @@ class Aircraft3Dof(BaseSystem):
     CD0 = 0.033
     CD1 = 0.017
     name = 'aircraft'
-    control_size = 2  # CL, phi
-    state_lower_bound = [-np.inf, -np.inf, -np.inf, 3, -np.inf, -np.inf]
-    state_upper_bound = [np.inf, np.inf, -0.01, np.inf, np.inf, np.inf]
-    control_lower_bound = [-0.5, np.deg2rad(-70)]
-    control_upper_bound = [1.5, np.deg2rad(70)]
 
     def __init__(self, initial_state, wind):
-        super().__init__(self.name, initial_state, self.control_size)
+        super().__init__(initial_state)
         self.wind = wind
         self.term1 = self.rho*self.S/2/self.m
 
@@ -43,8 +35,8 @@ class Aircraft3Dof(BaseSystem):
         return self._raw_deriv(state, t, raw_control, external)
 
     def _raw_deriv(self, state, t, control, external):
-        x, y, z, V, gamma, psi = state
-        CD, CL, phi = control
+        x, y, z, V, gamma, psi = state.ravel()
+        CD, CL, phi = control()
         (_, Wy, _), (_, (_, _, dWydz), _) = external['wind']
 
         dxdt = V*np.cos(gamma)*np.cos(psi)
@@ -60,7 +52,7 @@ class Aircraft3Dof(BaseSystem):
         dpsidt = (self.term1*V/np.cos(gamma)*CL*np.sin(phi)
                   - dWydt*np.cos(psi)/V/np.cos(gamma))
 
-        return np.array([dxdt, dydt, dzdt, dVdt, dgammadt, dpsidt])
+        return np.vstack([dxdt, dydt, dzdt, dVdt, dgammadt, dpsidt])
 
 
 class F16LinearLateral(BaseSystem):
@@ -347,9 +339,9 @@ class MorphingLon(BaseSystem, MorphingPlane):
         """Get the state derivative for given (x, u)"""
         self._check_control(u)
 
-        V, alpha, q, gamma = x
-        delt, dele = u
-        eta1, eta2 = eta
+        V, alpha, q, gamma = x.ravel()
+        delt, dele = u.ravel()
+        eta1, eta2 = eta.ravel()
 
         S, cbar, Tmax = self.S, self.cbar, self.Tmax
         m, g = self.mass, self.g
@@ -468,7 +460,7 @@ class TransportLinearLongitudinal(BaseSystem):
         [0, 0]
     ])
     cp = np.array([
-        [0, 0, 57.2958, 0, 0, 0],
+        [0, 0, 57.2958, 0, 0, 0, 0],
         [0, 0, 0, 57.2958, 0, 0, 0]
     ])
 
