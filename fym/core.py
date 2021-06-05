@@ -216,26 +216,33 @@ class BaseEnv:
         if self.eager_stop:
             t_hist, ode_hist, done = self.eager_stop(t_hist, ode_hist)
 
-        tfinal, yfinal = t_hist[-1], ode_hist[-1]
-        # Update the systems' state
-        for system in self.systems:
-            system.state = yfinal[system.flat_index].reshape(system.state_shape)
-
         self.update_delays(t_hist, ode_hist)
 
         # Log the inner history of states
         if self.logger:
             if not self.logger_callback:
                 for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                    state_dict = self.observe_dict(y)
-                    if kwargs:
-                        self.logger.record(time=t, state=state_dict, **kwargs)
+                    self.clock.set(t)
+                    for system in self.systems:
+                        system.state = y[system.flat_index].reshape(
+                            system.state_shape)
+                    info = self.set_dot(t, **kwargs)
+                    if info is None:
+                        self.logger.record(t=t, **self.observe_dict())
                     else:
-                        self.logger.record(time=t, state=state_dict)
+                        self.logger.record(**info)
             else:
-                for i, (t, y) in enumerate(zip(t_hist[:-1], ode_hist[:-1])):
-                    self.logger.record(
-                        **self.logger_callback(i, t, y, t_hist, ode_hist))
+                for t, y in zip(t_hist[:-1], ode_hist[:-1]):
+                    self.clock.set(t)
+                    for system in self.systems:
+                        system.state = y[system.flat_index].reshape(
+                            system.state_shape)
+                    self.logger.record(**self.logger_callback(t, **kwargs))
+
+        tfinal, yfinal = t_hist[-1], ode_hist[-1]
+        # Update the systems' state
+        for system in self.systems:
+            system.state = yfinal[system.flat_index].reshape(system.state_shape)
 
         self.clock.set(tfinal)
 
