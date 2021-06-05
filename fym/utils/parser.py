@@ -110,7 +110,7 @@ def update(sn, d):
         if k in sn and isinstance(v, (dict, SN)) and isinstance(sn[k], (dict, SN)):
             update(sn[k], d[k])
         else:
-            sn[k] = d[k]
+            sn[k] = encode(d[k])
 
 
 if __name__ == "__main__":
@@ -125,7 +125,6 @@ if __name__ == "__main__":
             "env.kwargs.dt": 0.01,
             "env.kwargs.max_t": 10,
             "env.solver": "rk4",
-            "etc": SN(k1=1, k2=dict(k21=2, k22=SN(k221=3, k222=dict(k2221=4)))),
         })
 
         parser.update(agents_cfg, {
@@ -134,3 +133,5 @@ if __name__ == "__main__":
         })
 
     load_config()
+
+    cfg.env.kwargs.dt = 0.02
