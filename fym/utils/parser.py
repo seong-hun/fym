@@ -3,12 +3,7 @@ from functools import reduce
 import re
 
 
-def make_clean(string):
-    """From https://stackoverflow.com/a/3305731"""
-    return re.sub(r"\W+|^(?=\d)", "_", string)
-
-
-class SimpleSN(SN):
+class PrettySN(SN):
     def __repr__(self, indent=0):
         items = ["{"]
         indent += 1
@@ -25,10 +20,39 @@ class SimpleSN(SN):
         return "\n".join(items)
 
 
-def nested_merge(a, b):
+def make_clean(string):
+    """From https://stackoverflow.com/a/3305731"""
+    return re.sub(r"\W+|^(?=\d)", "_", string)
+
+
+def put(d, k, v):
+    chunks = k.split(".", 1)
+    root_key = chunks[0]
+    if not root_key:
+        raise KeyError("empty root key")
+    if len(chunks) == 1:
+        d[root_key] = v
+    else:
+        if root_key not in d:
+            d[root_key] = {}
+        if not isinstance(d[root_key], dict):
+            raise KeyError("sub document is not a dictinary")
+        put(d[root_key], chunks[1], v)
+
+
+def unwind_nested_dict(d):
+    result = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = unwind_nested_dict(v)
+        put(result, k, v)
+    return result
+
+
+def merge_dict(a, b):
     for k, v in b.items():
         if k in a and isinstance(v, dict) and isinstance(a[k], dict):
-            nested_merge(a[k], b[k])
+            merge_dict(a[k], b[k])
         else:
             a[k] = b[k]
 
@@ -39,47 +63,74 @@ def dotdict2nestdict(data):
         if isinstance(val, dict):
             val = dotdict2nestdict(val)
         d = reduce(lambda d, k: {k: d}, keystring.split(".")[::-1], val)
-        nested_merge(out, d)
+        merge_dict(out, d)
     return out
 
 
-def nestdict2sn(d):
-    out = SimpleSN()
+def encode(d):
+    """Encode a dict to a SimpleNamespace"""
+    if isinstance(d, SN):
+        d = SN.__dict__
+    elif not isinstance(d, dict):
+        return d
+
+    out = PrettySN()
     for k, v in d.items():
         if isinstance(v, dict):
-            setattr(out, make_clean(k), nestdict2sn(v))
+            setattr(out, make_clean(k), encode(v))
         else:
             setattr(out, make_clean(k), v)
     return out
 
 
-def parse(json_dict):
-    return nestdict2sn(dotdict2nestdict(json_dict))
+def decode(sn):
+    """Decode a SimpleNamespace or a dict to a nested dict"""
+    if isinstance(sn, SN):
+        sn = sn.__dict__
+    elif not isinstance(sn, dict):
+        return sn
+    out = {}
+    for key, val in sn.items():
+        if isinstance(val, (SN, dict)):
+            val = decode(val)
+        out.update({key: val})
+    return out
+
+
+def parse(d={}):
+    return encode(unwind_nested_dict(decode(d)))
+
+
+def update(sn, d):
+    """Update a SimpleNamespace with a dict or a SimpleNamespace"""
+    if isinstance(sn, SN):
+        sn = vars(sn)
+    d = unwind_nested_dict(decode(d))
+    for k, v in d.items():
+        if k in sn and isinstance(v, (dict, SN)) and isinstance(sn[k], (dict, SN)):
+            update(sn[k], d[k])
+        else:
+            sn[k] = d[k]
 
 
 if __name__ == "__main__":
-    import json
+    import numpy as np
+    import fym.utils.parser as parser
 
-    settings = {
-        "diffEditor.codeLens": False,
-        "diffEditor.ignoreTrimWhitespace": True,
-        "diffEditor.maxComputationTime": 5000,
-        "diffEditor.renderIndicators": True,
-        "diffEditor.renderSideBySide": True,
-        "diffEditor.wordWrap": "inherit",
-        "editor.acceptSuggestionOnCommitCharacter": True,
-        "editor.acceptSuggestionOnEnter": "on",
-        "editor.rulers": [],
-        "editor.scrollBeyondLastColumn": 5,
-        "editor.scrollBeyondLastLine": True,
-        "workbench.colorCustomizations": {
-            "editor.background": "#000088",
-            "editor.selectionBackground": "#008800",
-            "Custom setup": 1,
-            "3": 3,
-        }
-    }
-    f = json.dumps(settings)
-    config_json = json.loads(f)
-    parsing_from_json = parse(config_json)
-    parsing_from_dict = parse(settings)
+    cfg = parser.parse()
+    agents_cfg = {}
+
+    def load_config():
+        parser.update(cfg, {
+            "env.kwargs.dt": 0.01,
+            "env.kwargs.max_t": 10,
+            "env.solver": "rk4",
+            "etc": SN(k1=1, k2=dict(k21=2, k22=SN(k221=3, k222=dict(k2221=4)))),
+        })
+
+        parser.update(agents_cfg, {
+            "CommonAgent.memory_len": 4000,
+            "CommonAgent.batch_size": 2000,
+        })
+
+    load_config()
