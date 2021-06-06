@@ -20,12 +20,12 @@ class PrettySN(SN):
         return "\n".join(items)
 
 
-def make_clean(string):
+def _make_clean(string):
     """From https://stackoverflow.com/a/3305731"""
     return re.sub(r"\W+|^(?=\d)", "_", string)
 
 
-def put(d, k, v):
+def _put(d, k, v):
     chunks = k.split(".", 1)
     root_key = chunks[0]
     if not root_key:
@@ -37,7 +37,7 @@ def put(d, k, v):
             d[root_key] = {}
         if not isinstance(d[root_key], dict):
             raise KeyError("sub document is not a dictinary")
-        put(d[root_key], chunks[1], v)
+        _put(d[root_key], chunks[1], v)
 
 
 def unwind_nested_dict(d):
@@ -45,26 +45,8 @@ def unwind_nested_dict(d):
     for k, v in d.items():
         if isinstance(v, dict):
             v = unwind_nested_dict(v)
-        put(result, k, v)
+        _put(result, k, v)
     return result
-
-
-def merge_dict(a, b):
-    for k, v in b.items():
-        if k in a and isinstance(v, dict) and isinstance(a[k], dict):
-            merge_dict(a[k], b[k])
-        else:
-            a[k] = b[k]
-
-
-def dotdict2nestdict(data):
-    out = {}
-    for keystring, val in data.items():
-        if isinstance(val, dict):
-            val = dotdict2nestdict(val)
-        d = reduce(lambda d, k: {k: d}, keystring.split(".")[::-1], val)
-        merge_dict(out, d)
-    return out
 
 
 def encode(d):
@@ -77,9 +59,9 @@ def encode(d):
     out = PrettySN()
     for k, v in d.items():
         if isinstance(v, dict):
-            setattr(out, make_clean(k), encode(v))
+            setattr(out, _make_clean(k), encode(v))
         else:
-            setattr(out, make_clean(k), v)
+            setattr(out, _make_clean(k), v)
     return out
 
 
