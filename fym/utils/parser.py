@@ -96,24 +96,37 @@ def update(sn, d):
 
 
 if __name__ == "__main__":
-    import numpy as np
+    # ``parser.parse``
     import fym.utils.parser as parser
+    from fym.core import BaseEnv, BaseSystem
 
+    json_dict = {
+        "env.kwargs": dict(dt=0.01, max_t=10),
+        "multicopter.nrotor": 6,
+        "multicopter.m": 3.,
+        "multicopter.LQRGain": {
+            "Q": [1, 1, 1, 1],
+            "R": [1, 1],
+        },
+        "actuator.tau": 1e-1,
+    }
+
+    cfg = parser.parse(json_dict)
+
+    # ``parser.update``
     cfg = parser.parse()
-    agents_cfg = {}
 
     def load_config():
         parser.update(cfg, {
-            "env.kwargs.dt": 0.01,
-            "env.kwargs.max_t": 10,
-            "env.solver": "rk4",
-        })
-
-        parser.update(agents_cfg, {
-            "CommonAgent.memory_len": 4000,
-            "CommonAgent.batch_size": 2000,
+            "env.kwargs": dict(dt=0.01, max_t=10),
+            "agent.memory_size": 1000,
+            "agent.minibatch_size": 32,
         })
 
     load_config()
+    cfg.env.kwargs.dt = 0.001
 
-    cfg.env.kwargs.dt = 0.02
+    # ``parser.decode``
+    cfg = parser.parse()
+    parser.update(cfg, {"env.kwargs": dict(dt=0.01, max_t=10)})
+    env = BaseEnv(**parser.decode(cfg.env.kwargs))
