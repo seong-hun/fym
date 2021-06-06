@@ -24,7 +24,8 @@ class BaseEnv:
 
         self.indexing()
 
-        self.eager_stop = eager_stop
+        if eager_stop is not None or not hasattr(self, "eager_stop"):
+            self.eager_stop = eager_stop
 
         if not isinstance(ode_step_len, int):
             raise ValueError("ode_step_len should be integer.")
