@@ -25,19 +25,12 @@ def _make_clean(string):
     return re.sub(r"\W+|^(?=\d)", "_", string)
 
 
-def _put(d, k, v):
-    chunks = k.split(".", 1)
-    root_key = chunks[0]
-    if not root_key:
-        raise KeyError("empty root key")
-    if len(chunks) == 1:
-        d[root_key] = v
-    else:
-        if root_key not in d:
-            d[root_key] = {}
-        if not isinstance(d[root_key], dict):
-            raise KeyError("sub document is not a dictinary")
-        _put(d[root_key], chunks[1], v)
+def _put(a, b):
+    for k, v in b.items():
+        if k in a and isinstance(v, dict) and isinstance(a[k], dict):
+            _put(a[k], b[k])
+        else:
+            a[k] = b[k]
 
 
 def unwind_nested_dict(d):
@@ -45,7 +38,8 @@ def unwind_nested_dict(d):
     for k, v in d.items():
         if isinstance(v, dict):
             v = unwind_nested_dict(v)
-        _put(result, k, v)
+        d = reduce(lambda d, k: {k: d}, k.split(".")[::-1], v)
+        _put(result, d)
     return result
 
 
