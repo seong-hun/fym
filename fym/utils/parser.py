@@ -1,3 +1,4 @@
+import numpy as np
 from types import SimpleNamespace as SN
 from functools import reduce
 import re
@@ -11,6 +12,10 @@ class PrettySN(SN):
             item = "  " * indent + str(key) + ": "
             if isinstance(val, SN):
                 item += val.__repr__(indent)
+            elif isinstance(val, np.ndarray):
+                if val.ndim > 1 and val.shape[0] > 1:
+                    item += np.array2string(
+                        val, prefix=" " * len(item))
             else:
                 item += str(val)
             item += ","
