@@ -97,3 +97,16 @@ def velocity2polar(vel):
     gamma = np.arcsin(- vel[2] / norm).squeeze()
     return np.array([norm, chi, gamma])
 
+
+def cartesian2spherical(vector):
+    r = nla.norm(vector)
+    chi = np.arctan2(vector[1], vector[0]).item()
+    gamma = np.arccos(vector[2] / r).item()
+    return r, chi, gamma
+
+
+def spherical2cartesian(r, chi, gamma):
+    x = r * np.sin(gamma) * np.cos(chi)
+    y = r * np.sin(gamma) * np.sin(chi)
+    z = r * np.cos(gamma)
+    return np.vstack((x, y, z))
