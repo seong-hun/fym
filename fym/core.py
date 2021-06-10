@@ -378,8 +378,10 @@ class Clock:
         self._interval = ode_step_len
         interval_step = self.dt / self._interval
         self.tspan = np.arange(0, self.max_t + interval_step, interval_step)
+        self.tspan = self.tspan[self.tspan <= max_t]
         self.index = 0
-        self._max_index = len(self.tspan) - 1
+        self.max_len = len(self.tspan)
+        self._max_index = self.max_len - 1
 
     def reset(self, t=0.):
         self.index = np.flatnonzero(self.tspan == t)[0].item()
