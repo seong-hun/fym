@@ -125,8 +125,8 @@ class BaseEnv:
             system.state_size for system in self._systems_list
         ]), 1)
 
-        self._state = np.zeros(self.state_shape)
-        self._dot = np.zeros(self.state_shape)
+        self._state = np.empty(self.state_shape)
+        self._dot = np.empty(self.state_shape)
         self.distributing()
 
     def distributing(self):
@@ -453,7 +453,7 @@ class Delay:
 
 def rk4(func, y0, t, args=()):
     n = len(t)
-    y = np.zeros((n, len(y0)))
+    y = np.empty((n, len(y0)))
     y[0] = y0
     for i in range(n - 1):
         h = t[i+1] - t[i]
