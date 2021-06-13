@@ -3,6 +3,7 @@ import h5py
 import numpy as np
 import os
 from datetime import datetime
+from .utils import parser
 
 
 class Logger:
@@ -19,7 +20,7 @@ class Logger:
         with h5py.File(self.path, mode):
             pass
         self.mode = mode
-        self.max_len = max_len
+        self.max_len = int(max_len)
         self._info = {}
 
         self.clear()
@@ -39,14 +40,14 @@ class Logger:
 
     def clear(self):
         self.buffer = {}
-        self.len = 0
+        self.index = 0
 
     def record(self, **kwargs):
         """Record a dictionary or a numeric data preserving the structure."""
-        _rec_update(self.buffer, kwargs)
-        self.len += 1
+        self._rec_update(self.buffer, kwargs)
+        self.index += 1
 
-        if self.len >= self.max_len:
+        if self.index >= self.max_len:
             self.flush()
 
     def flush(self, info=None):
@@ -58,10 +59,26 @@ class Logger:
     def close(self):
         self.flush(info=self._info)
 
-    def set_info(self, *args, **kwargs):
-        _rec_update(self._info, dict(*args, **kwargs), is_info=True)
+    def set_info(self, **kwargs):
+        parser.update(self._info, kwargs)
         with h5py.File(self.path, "r+") as h5file:
             _info_save(h5file, self._info)
+
+    def _rec_update(self, base_dict, input_dict):
+        """Recursively update ``base_dict`` with ``input_dict``."""
+        for key, val in input_dict.items():
+            if isinstance(val, dict):
+                if self.index == 0:
+                    base_dict[key] = {}
+                self._rec_update(base_dict[key], val)
+            elif not isinstance(val, str):
+                if self.index != 0:
+                    base_dict[key][self.index] = val.copy()
+                else:
+                    base_dict[key] = np.empty(
+                        (self.max_len,) + np.shape(val))
+            else:
+                raise ValueError("Unsupported data type")
 
 
 def save(h5file, dic, mode="w", info=None):
@@ -92,7 +109,8 @@ def _rec_save(h5file, path, dic):
     """Recursively save the ``dic`` into the HDF5 file."""
     for key, val in dic.items():
         if isinstance(val, (np.ndarray, list)):
-            val = np.stack(val)
+            if isinstance(val, list):
+                val = np.stack(val)
             if path + key not in h5file:
                 dset = h5file.create_dataset(
                     path + key,
@@ -128,21 +146,6 @@ def _rec_load(h5file, path):
         elif isinstance(item, h5py._hl.group.Group):
             ans[key] = _rec_load(h5file, path + key + '/')
     return ans
-
-
-def _rec_update(base_dict, input_dict, is_info=False):
-    """Recursively update ``base_dict`` with ``input_dict``."""
-    for key, val in input_dict.items():
-        if isinstance(val, dict):
-            _rec_update(base_dict.setdefault(key, {}), val, is_info)
-        else:
-            if is_info:
-                base_dict.update({key: val})
-            else:
-                if not isinstance(val, str):
-                    base_dict.setdefault(key, []).append(np.copy(val))
-                else:
-                    raise ValueError("Unsupported data type")
 
 
 if __name__ == '__main__':
