@@ -75,7 +75,7 @@ class Logger:
             elif not isinstance(val, str):
                 if key not in base_dict:
                     base_dict[key] = np.empty((self.max_len,) + np.shape(val))
-                base_dict[key][self.index] = val.copy()
+                base_dict[key][self.index] = np.copy(val)
             else:
                 raise ValueError("Unsupported data type")
 
