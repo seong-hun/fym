@@ -68,15 +68,13 @@ class Logger:
         """Recursively update ``base_dict`` with ``input_dict``."""
         for key, val in input_dict.items():
             if isinstance(val, dict):
-                if self.index == 0:
+                if key not in base_dict:
                     base_dict[key] = {}
                 self._rec_update(base_dict[key], val)
             elif not isinstance(val, str):
-                if self.index != 0:
-                    base_dict[key][self.index] = val.copy()
-                else:
-                    base_dict[key] = np.empty(
-                        (self.max_len,) + np.shape(val))
+                if key not in base_dict:
+                    base_dict[key] = np.empty((self.max_len,) + np.shape(val))
+                base_dict[key][self.index] = val.copy()
             else:
                 raise ValueError("Unsupported data type")
 
