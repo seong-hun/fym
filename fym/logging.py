@@ -52,7 +52,7 @@ class Logger:
 
     def flush(self, info=None):
         with h5py.File(self.path, "r+") as h5file:
-            _rec_save(h5file, '/', self.buffer)
+            _rec_save(h5file, '/', self.buffer, self.index)
             _info_save(h5file, info)
         self.clear()
 
@@ -103,12 +103,14 @@ def _info_save(h5file, info=None):
         h5file.attrs.update(_info=np.void(ser))
 
 
-def _rec_save(h5file, path, dic):
+def _rec_save(h5file, path, dic, index=None):
     """Recursively save the ``dic`` into the HDF5 file."""
     for key, val in dic.items():
         if isinstance(val, (np.ndarray, list)):
             if isinstance(val, list):
                 val = np.stack(val)
+            if index is not None:
+                val = val[:index]
             if path + key not in h5file:
                 dset = h5file.create_dataset(
                     path + key,
@@ -122,7 +124,7 @@ def _rec_save(h5file, path, dic):
                 dset.resize(dset.shape[0] + len(val), axis=0)
                 dset[-len(val):] = val
         elif isinstance(val, dict):
-            _rec_save(h5file, path + key + '/', val)
+            _rec_save(h5file, path + key + '/', val, index)
         else:
             raise ValueError(f'Cannot save {type(val)} type')
 
