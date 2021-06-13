@@ -59,25 +59,25 @@ class Env(BaseEnv):
         )
         self.J.dot = self.Q(x) + 0.25 * W2.T @ D @ W2
 
-#         w1, w2, w3 = W1.ravel()
-#         P = 0.5 * np.array([
-#             [2 * w1, w2],
-#             [w2, 2 * w3]
-#         ])
+        w1, w2, w3 = W1.ravel()
+        P = 0.5 * np.array([
+            [2 * w1, w2],
+            [w2, 2 * w3]
+        ])
 
-#         w1, w2, w3 = W2.ravel()
-#         K = 0.5 * cfg.Rinv @ cfg.B.T @ np.array([
-#             [2 * w1, w2],
-#             [w2, 2 * w3]
-#         ])
+        w1, w2, w3 = W2.ravel()
+        K = 0.5 * cfg.Rinv @ cfg.B.T @ np.array([
+            [2 * w1, w2],
+            [w2, 2 * w3]
+        ])
 
-#         return dict(
-#             t=t,
-#             x=np.rad2deg(x).ravel(),
-#             u=np.rad2deg(u).ravel(),
-#             P=P.ravel(),
-#             K=K.ravel(),
-#         )
+        return dict(
+            t=t,
+            x=np.rad2deg(x).ravel(),
+            u=np.rad2deg(u).ravel(),
+            P=P.ravel(),
+            K=K.ravel(),
+        )
 
     def Q(self, x):
         return x.T @ cfg.Q @ x
@@ -137,8 +137,8 @@ cfg.K, cfg.P = clqr(cfg.A, cfg.B, cfg.Q, cfg.R)
 # Run simulation
 def run():
     env = Env()
-    # env.logger = fym.logging.Logger("data.h5")
-    # env.logger.set_info(cfg=cfg)
+    env.logger = fym.logging.Logger("data.h5")
+    env.logger.set_info(cfg=cfg)
 
     env.reset()
 
