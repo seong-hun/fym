@@ -8,7 +8,7 @@ from .utils import parser
 
 class Logger:
     def __init__(self, path=None, log_dir=None, file_name="data.h5",
-                 max_len=1e2, mode="w"):
+                 max_len=1e3, mode="w"):
         if path is None:
             if log_dir is None:
                 log_dir = os.path.join(
@@ -50,14 +50,15 @@ class Logger:
         if self.index >= self.max_len:
             self.flush()
 
-    def flush(self, info=None):
+    def flush(self):
         with h5py.File(self.path, "r+") as h5file:
             _rec_save(h5file, '/', self.buffer, self.index)
-            _info_save(h5file, info)
         self.clear()
 
     def close(self):
-        self.flush(info=self._info)
+        self.flush()
+        with h5py.File(self.path, "r+") as h5file:
+            _info_save(h5file, self._info)
 
     def set_info(self, **kwargs):
         parser.update(self._info, kwargs)
