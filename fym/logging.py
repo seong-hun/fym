@@ -3,11 +3,12 @@ import h5py
 import numpy as np
 import os
 from datetime import datetime
+from .utils import parser
 
 
 class Logger:
     def __init__(self, path=None, log_dir=None, file_name="data.h5",
-                 max_len=1e2, mode="w"):
+                 max_len=1e3, mode="w"):
         if path is None:
             if log_dir is None:
                 log_dir = os.path.join(
@@ -19,7 +20,7 @@ class Logger:
         with h5py.File(self.path, mode):
             pass
         self.mode = mode
-        self.max_len = max_len
+        self.max_len = int(max_len)
         self._info = {}
 
         self.clear()
@@ -39,29 +40,44 @@ class Logger:
 
     def clear(self):
         self.buffer = {}
-        self.len = 0
+        self.index = 0
 
     def record(self, **kwargs):
         """Record a dictionary or a numeric data preserving the structure."""
-        _rec_update(self.buffer, kwargs)
-        self.len += 1
+        self._rec_update(self.buffer, kwargs)
+        self.index += 1
 
-        if self.len >= self.max_len:
+        if self.index >= self.max_len:
             self.flush()
 
-    def flush(self, info=None):
+    def flush(self):
         with h5py.File(self.path, "r+") as h5file:
-            _rec_save(h5file, '/', self.buffer)
-            _info_save(h5file, info)
+            _rec_save(h5file, '/', self.buffer, self.index)
         self.clear()
 
     def close(self):
-        self.flush(info=self._info)
-
-    def set_info(self, *args, **kwargs):
-        _rec_update(self._info, dict(*args, **kwargs), is_info=True)
+        self.flush()
         with h5py.File(self.path, "r+") as h5file:
             _info_save(h5file, self._info)
+
+    def set_info(self, **kwargs):
+        parser.update(self._info, kwargs)
+        with h5py.File(self.path, "r+") as h5file:
+            _info_save(h5file, self._info)
+
+    def _rec_update(self, base_dict, input_dict):
+        """Recursively update ``base_dict`` with ``input_dict``."""
+        for key, val in input_dict.items():
+            if isinstance(val, dict):
+                if key not in base_dict:
+                    base_dict[key] = {}
+                self._rec_update(base_dict[key], val)
+            elif not isinstance(val, str):
+                if key not in base_dict:
+                    base_dict[key] = np.empty((self.max_len,) + np.shape(val))
+                base_dict[key][self.index] = np.copy(val)
+            else:
+                raise ValueError("Unsupported data type")
 
 
 def save(h5file, dic, mode="w", info=None):
@@ -88,11 +104,14 @@ def _info_save(h5file, info=None):
         h5file.attrs.update(_info=np.void(ser))
 
 
-def _rec_save(h5file, path, dic):
+def _rec_save(h5file, path, dic, index=None):
     """Recursively save the ``dic`` into the HDF5 file."""
     for key, val in dic.items():
         if isinstance(val, (np.ndarray, list)):
-            val = np.stack(val)
+            if isinstance(val, list):
+                val = np.stack(val)
+            if index is not None:
+                val = val[:index]
             if path + key not in h5file:
                 dset = h5file.create_dataset(
                     path + key,
@@ -106,7 +125,7 @@ def _rec_save(h5file, path, dic):
                 dset.resize(dset.shape[0] + len(val), axis=0)
                 dset[-len(val):] = val
         elif isinstance(val, dict):
-            _rec_save(h5file, path + key + '/', val)
+            _rec_save(h5file, path + key + '/', val, index)
         else:
             raise ValueError(f'Cannot save {type(val)} type')
 
@@ -128,21 +147,6 @@ def _rec_load(h5file, path):
         elif isinstance(item, h5py._hl.group.Group):
             ans[key] = _rec_load(h5file, path + key + '/')
     return ans
-
-
-def _rec_update(base_dict, input_dict, is_info=False):
-    """Recursively update ``base_dict`` with ``input_dict``."""
-    for key, val in input_dict.items():
-        if isinstance(val, dict):
-            _rec_update(base_dict.setdefault(key, {}), val, is_info)
-        else:
-            if is_info:
-                base_dict.update({key: val})
-            else:
-                if not isinstance(val, str):
-                    base_dict.setdefault(key, []).append(np.copy(val))
-                else:
-                    raise ValueError("Unsupported data type")
 
 
 if __name__ == '__main__':

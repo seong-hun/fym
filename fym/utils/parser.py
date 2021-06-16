@@ -33,9 +33,9 @@ def _make_clean(string):
 def _put(a, b):
     for k, v in b.items():
         if k in a and isinstance(v, dict) and isinstance(a[k], dict):
-            _put(a[k], b[k])
+            _put(a[k], v)
         else:
-            a[k] = b[k]
+            a[k] = v
 
 
 def unwind_nested_dict(d):
@@ -89,9 +89,9 @@ def update(sn, d):
     d = unwind_nested_dict(decode(d))
     for k, v in d.items():
         if k in sn and isinstance(v, (dict, SN)) and isinstance(sn[k], (dict, SN)):
-            update(sn[k], d[k])
+            update(sn[k], v)
         else:
-            sn[k] = encode(d[k])
+            sn[k] = encode(v)
 
 
 if __name__ == "__main__":
