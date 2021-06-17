@@ -2,6 +2,7 @@ import numpy as np
 from types import SimpleNamespace as SN
 from functools import reduce
 import re
+import copy
 
 
 class PrettySN(SN):
@@ -92,6 +93,12 @@ def update(sn, d):
             update(sn[k], v)
         else:
             sn[k] = encode(v)
+
+
+def merge(d1, d2):
+    d = copy.deepcopy(parse(d1))
+    update(d, copy.deepcopy(parse(d2)))
+    return d
 
 
 if __name__ == "__main__":
