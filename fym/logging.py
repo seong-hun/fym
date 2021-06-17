@@ -82,7 +82,7 @@ class Logger:
 
 def save(h5file, dic, mode="w", info=None):
     if not isinstance(h5file, h5py.File):
-        if isinstance(h5file, str):
+        try:
             dirname = os.path.dirname(h5file)
 
             if dirname:
@@ -91,7 +91,7 @@ def save(h5file, dic, mode="w", info=None):
             with h5py.File(h5file, mode) as h5file:
                 _rec_save(h5file, '/', dic)
                 _info_save(h5file, info)
-        else:
+        except ValueError:
             raise ValueError(f'Cannot save into {type(h5file)} type')
     else:
         _rec_save(h5file, '/', dic)
