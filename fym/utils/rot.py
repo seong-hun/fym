@@ -170,3 +170,17 @@ def sph2cart2(r, azimuth, polar):
     cart[1, 0] = y
     cart[2, 0] = z
     return cart
+
+
+def cartesian2spherical(vector):
+    r = nla.norm(vector)
+    chi = np.arctan2(vector[1], vector[0]).item()
+    gamma = np.arccos(vector[2] / r).item()
+    return r, chi, gamma
+
+
+def spherical2cartesian(r, chi, gamma):
+    x = r * np.sin(gamma) * np.cos(chi)
+    y = r * np.sin(gamma) * np.sin(chi)
+    z = r * np.cos(gamma)
+    return np.vstack((x, y, z))
