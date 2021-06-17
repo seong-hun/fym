@@ -19,9 +19,6 @@ class Env(BaseEnv):
         self.W2 = BaseSystem(cfg.initial_states.W2)
         self.J = BaseSystem()
 
-        self.delay_x = Delay(self.plant, cfg.agent.T)
-        self.delay_J = Delay(self.J, cfg.agent.T)
-
     def observe(self):
         x = self.plant.state
         return self.Phi(x)
@@ -36,8 +33,8 @@ class Env(BaseEnv):
         W2 = self.W2.state
         J = self.J.state
 
-        x_prev = self.delay_x.get(t)
-        J_prev = self.delay_J.get(t)
+        x_prev = x
+        J_prev = J
 
         rho = J - J_prev
         dphi = self.Phi(x) - self.Phi(x_prev)
@@ -146,7 +143,7 @@ def run():
     env.reset()
 
     while True:
-        env.render()
+        # env.render()
         done = env.step()
 
         if done:

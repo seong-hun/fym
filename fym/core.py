@@ -87,6 +87,10 @@ class BaseEnv:
         return "\n".join(result)
 
     @property
+    def systems(self):
+        return self._systems_list
+
+    @property
     def state(self):
         return self._state
 
