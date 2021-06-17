@@ -37,7 +37,8 @@ References:
 
 def quat2dcm(quat):
     quat = np.squeeze(quat)
-    q0, q1, q2, q3 = quat / nla.norm(quat)
+    q0, q1, q2, q3 = quat / np.sqrt(quat[0]**2
+                                    + quat[1]**2 + quat[2]**2 + quat[3]**2)
 
     return np.array([
         [q0**2 + q1**2 - q2**2 - q3**2, 2*(q1*q2 + q0*q3), 2*(q1*q3 - q0*q2)],
@@ -68,7 +69,12 @@ def dcm2quat(dcm):
         q0 = -(dcm[1, 0] - dcm[0, 1])/(4*q3)
         q1 = (dcm[0, 2] + dcm[2, 0])/(4*q3)
         q2 = (dcm[2, 1] + dcm[1, 2])/(4*q3)
-    return np.vstack((q0, q1, q2, q3))
+    quat = np.empty((4, 1))
+    quat[0, 0] = q0
+    quat[1, 0] = q1
+    quat[2, 0] = q2
+    quat[3, 0] = q3
+    return quat
 
 
 def angle2quat(yaw, pitch, roll):
@@ -79,7 +85,7 @@ def angle2quat(yaw, pitch, roll):
     cp = cos(pitch * 0.5)
     sp = sin(pitch * 0.5)
 
-    quat = np.zeros((4, 1))
+    quat = np.empty((4, 1))
     quat[0, 0] = cy * cr * cp + sy * sr * sp
     quat[1, 0] = cy * sr * cp - sy * cr * sp
     quat[2, 0] = cy * cr * sp + sy * sr * cp
@@ -89,7 +95,8 @@ def angle2quat(yaw, pitch, roll):
 
 def quat2angle(quat):
     """Output: yaw, pitch, roll"""
-    qin = (quat / nla.norm(quat)).squeeze()
+    qin = (quat / np.sqrt(quat[0]**2 + quat[1]**2 + quat[2]**2 + quat[3]**2)
+           ).squeeze()
 
     r11 = 2 * (qin[1] * qin[2] + qin[0] * qin[3])
     r12 = qin[0]**2 + qin[1]**2 - qin[2]**2 - qin[3]**2
@@ -121,7 +128,45 @@ def dcm2angle(dcm):
 
 def velocity2polar(vel):
     vel = vel.ravel()
-    norm = sla.norm(vel)
+    norm = np.sqrt(vel[0]**2 + vel[1]**2 + vel[2]**2)
     chi = np.arctan2(vel[1], vel[0])
     gamma = np.arcsin(- vel[2] / norm)
     return np.array([norm, chi, gamma])
+
+
+def cart2sph(cart):
+    cart = cart.ravel()
+    r = np.sqrt(cart[0]**2 + cart[1]**2 + cart[2]**2)
+    azimuth = np.arctan2(cart[1], cart[0])
+    elevation = np.arctan2(cart[2], np.sqrt(cart[0]**2 + cart[1]**2))
+    return r, azimuth, elevation
+
+
+def sph2cart(r, azimuth, elevation):
+    x = r * cos(elevation) * cos(azimuth)
+    y = r * cos(elevation) * sin(azimuth)
+    z = r * sin(elevation)
+    cart = np.empty((3, 1))
+    cart[0, 0] = x
+    cart[1, 0] = y
+    cart[2, 0] = z
+    return cart
+
+
+def cart2sph2(cart):
+    cart = cart.ravel()
+    r = np.sqrt(cart[0]**2 + cart[1]**2 + cart[2]**2)
+    azimuth = np.arctan2(cart[1], cart[0])
+    polar = np.arccos(cart[2] / r)
+    return r, azimuth, polar
+
+
+def sph2cart2(r, azimuth, polar):
+    x = r * sin(polar) * cos(azimuth)
+    y = r * sin(polar) * sin(azimuth)
+    z = r * cos(polar)
+    cart = np.empty((3, 1))
+    cart[0, 0] = x
+    cart[1, 0] = y
+    cart[2, 0] = z
+    return cart
