@@ -33,6 +33,8 @@ class BaseEnv:
         self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
 
         self.logger = logger
+        self._log_set_dot = True
+
         if logger_callback is not None or not hasattr(self, "logger_callback"):
             self.logger_callback = logger_callback
 
@@ -216,16 +218,14 @@ class BaseEnv:
         if self.logger:
             for t, y in zip(t_hist[:-1], ode_hist[:-1]):
                 self._state[:] = y[:, None]
+                data = {}
+                if self._log_set_dot:
+                    data.update(self.set_dot(t, **kwargs) or {})
+                    if not data:
+                        self._log_set_dot = False
                 if self.logger_callback:
-                    data = self.logger_callback(t, **kwargs)
-                    if self.set_dot.__name__ == "wrapper":
-                        data.update(self.set_dot(t, **kwargs))
-                else:
-                    data = self.set_dot(t, **kwargs)
-                    if data is None:
-                        data = dict(t=t, **self.observe_dict())
-
-                self.logger.record(**data)
+                    data.update(self.logger_callback(t, **kwargs))
+                self.logger.record(**(data or dict(t=t, **self.observe_dict())))
                 self.clock._tick_minor()
 
         # Update the systems' state
@@ -296,13 +296,6 @@ class BaseEnv:
             self.tqdm_bar.update(1)
             if desc:
                 self.tqdm_bar.set_description(desc)
-
-    def with_callback(func):
-        def wrapper(self, t, *args, **kwargs):
-            d = func(self, t, *args, **kwargs)
-            d.update(self.logger_callback(t, *args, **kwargs))
-            return d
-        return wrapper
 
 
 class BaseSystem:
