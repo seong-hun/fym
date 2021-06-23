@@ -151,7 +151,7 @@ class BaseEnv:
         if state is None:
             for system in self._systems_list:
                 if isinstance(system, BaseSystem):
-                    res.append(system.state)
+                    res.append(system._state)
                 elif isinstance(system, BaseEnv):
                     res.append(system.observe_list())
         else:
@@ -168,7 +168,7 @@ class BaseEnv:
         if state is None:
             for name, system in self._systems_dict.items():
                 if isinstance(system, BaseSystem):
-                    res[name] = system.state
+                    res[name] = system._state
                 elif isinstance(system, BaseEnv):
                     res[name] = system.observe_dict()
         else:
@@ -182,7 +182,7 @@ class BaseEnv:
 
     def observe_vec(self, state=None):
         if state is None:
-            res = self.state
+            res = self._state
         else:
             res = []
             for system in self._systems_list:
@@ -194,13 +194,13 @@ class BaseEnv:
         return res
 
     def observe_flat(self):
-        return self.state.ravel()
+        return self._state.ravel()
 
     def update(self, **kwargs):
         t_hist = self.clock._get_interval_span()
         ode_hist = self.solver(
             func=self.ode_func,
-            y0=self.state.ravel(),
+            y0=self._state.ravel(),
             t=t_hist,
             args=tuple(kwargs.values()),
             **self.ode_option
@@ -216,7 +216,7 @@ class BaseEnv:
         if self.logger:
             if not self.logger_callback:
                 for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                    self.state = y[:, None]
+                    self._state[:] = y[:, None]
                     data_to_record = self.set_dot(t, **kwargs)
                     if data_to_record is None:
                         self.logger.record(t=t, **self.observe_dict())
@@ -225,22 +225,22 @@ class BaseEnv:
                     self.clock._tick_minor()
             else:
                 for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                    self.state = y[:, None]
+                    self._state[:] = y[:, None]
                     self.logger.record(**self.logger_callback(t, **kwargs))
                     self.clock._tick_minor()
 
         # Update the systems' state
         self.clock._tick_major()
-        self.state = ode_hist[-1][:, None]
+        self._state[:] = ode_hist[-1][:, None]
 
         return t_hist, ode_hist, done or self.clock.time_over()
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
         def wrapper(y, t, *args):
-            self.state = y[:, None]
+            self._state[:] = y[:, None]
             func(t, *args)
-            return self.dot.ravel()
+            return self._dot.ravel()
         return wrapper
 
     def update_delays(self, t_hist, ode_hist):
@@ -384,8 +384,8 @@ class Clock:
         self.tspan = np.arange(0, self.max_t + interval_step, interval_step)
         self.tspan = self.tspan[self.tspan <= max_t]
         self.index = 0
-        self.max_len = len(self.tspan)
-        self._max_index = self.max_len - 1
+        self.max_len = int(np.ceil(max_t / dt))
+        self._max_index = len(self.tspan) - 1
 
     def reset(self, t=0.):
         self.index = np.flatnonzero(self.tspan == t)[0].item()
@@ -446,7 +446,7 @@ class Delay:
 
             return y[self.system.flat_index].reshape(self.system.state_shape)
         else:
-            return self.system.state
+            return self.system._state
 
     def update(self, t_hist, state_hist):
         self.memory.append(
