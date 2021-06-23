@@ -214,20 +214,19 @@ class BaseEnv:
 
         # Log the inner history of states
         if self.logger:
-            if not self.logger_callback:
-                for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                    self._state[:] = y[:, None]
-                    data_to_record = self.set_dot(t, **kwargs)
-                    if data_to_record is None:
-                        self.logger.record(t=t, **self.observe_dict())
-                    else:
-                        self.logger.record(**data_to_record)
-                    self.clock._tick_minor()
-            else:
-                for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                    self._state[:] = y[:, None]
-                    self.logger.record(**self.logger_callback(t, **kwargs))
-                    self.clock._tick_minor()
+            for t, y in zip(t_hist[:-1], ode_hist[:-1]):
+                self._state[:] = y[:, None]
+                if self.logger_callback:
+                    data = self.logger_callback(t, **kwargs)
+                    if self.set_dot.__name__ == "wrapper":
+                        data.update(self.set_dot(t, **kwargs))
+                else:
+                    data = self.set_dot(t, **kwargs)
+                    if data is None:
+                        data = dict(t=t, **self.observe_dict())
+
+                self.logger.record(**data)
+                self.clock._tick_minor()
 
         # Update the systems' state
         self.clock._tick_major()
@@ -297,6 +296,13 @@ class BaseEnv:
             self.tqdm_bar.update(1)
             if desc:
                 self.tqdm_bar.set_description(desc)
+
+    def with_callback(func):
+        def wrapper(self, t, *args, **kwargs):
+            d = func(self, t, *args, **kwargs)
+            d.update(self.logger_callback(t, *args, **kwargs))
+            return d
+        return wrapper
 
 
 class BaseSystem:
