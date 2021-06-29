@@ -75,6 +75,9 @@ class BaseEnv:
                 raise AttributeError(
                     "cannot assign delays before BaseEnv.__init__() call")
             delays[name] = value
+        elif isinstance(value, logging.Logger):
+            value._inner = True
+            super().__setattr__(name, value)
         else:
             super().__setattr__(name, value)
 
@@ -225,7 +228,7 @@ class BaseEnv:
                         self._log_set_dot = False
                 if self.logger_callback:
                     data.update(self.logger_callback(t, **kwargs))
-                self.logger.record(**(data or dict(t=t, **self.observe_dict())))
+                self.logger._record(**(data or dict(t=t, **self.observe_dict())))
                 self.clock._tick_minor()
 
         # Update the systems' state
