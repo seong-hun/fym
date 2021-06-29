@@ -232,7 +232,7 @@ class BaseEnv:
                 self.clock._tick_minor()
 
         # Update the systems' state
-        self.clock._tick_major()
+        self.clock._tick(t_hist.size - 1)
         self._state[:] = ode_hist[-1][:, None]
 
         return t_hist, ode_hist, done or self.clock.time_over()
@@ -393,16 +393,15 @@ class Clock:
         self.index = np.flatnonzero(self.tspan == t)[0].item()
 
     def _tick_major(self):
-        if self._minor_index == self._interval:
-            self._major_index += 1
-            self._minor_index = 0
+        self._major_index += 1
+        self._minor_index = 0
 
     def _tick_minor(self):
         assert self._minor_index < self._interval
         self._minor_index += 1
 
-    def _tick(self):
-        self.index += 1
+    def _tick(self, step=1):
+        self.index += step
 
     @property
     def index(self):
