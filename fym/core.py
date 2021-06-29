@@ -30,7 +30,7 @@ class BaseEnv:
         if not isinstance(ode_step_len, int):
             raise ValueError("ode_step_len should be integer.")
 
-        self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
+        self.clock = Clock(dt=dt, max_t=max_t, ode_step_len=ode_step_len)
 
         self.logger = logger
         self._log_set_dot = True
@@ -375,7 +375,7 @@ class Sequential(BaseEnv):
 
 
 class Clock:
-    def __init__(self, dt, ode_step_len, max_t=10):
+    def __init__(self, dt, max_t, ode_step_len=1):
         self.dt = dt
         self.max_t = max_t
         self._interval = ode_step_len
@@ -390,8 +390,9 @@ class Clock:
         self.index = np.flatnonzero(self.tspan == t)[0].item()
 
     def _tick_major(self):
-        self._major_index += 1
-        self._minor_index = 0
+        if self._minor_index == self._interval:
+            self._major_index += 1
+            self._minor_index = 0
 
     def _tick_minor(self):
         assert self._minor_index < self._interval
