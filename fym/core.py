@@ -30,7 +30,7 @@ class BaseEnv:
         if not isinstance(ode_step_len, int):
             raise ValueError("ode_step_len should be integer.")
 
-        self.clock = Clock(dt=dt, ode_step_len=ode_step_len, max_t=max_t)
+        self.clock = Clock(dt=dt, max_t=max_t, ode_step_len=ode_step_len)
 
         self.logger = logger
         self._log_set_dot = True
@@ -75,6 +75,9 @@ class BaseEnv:
                 raise AttributeError(
                     "cannot assign delays before BaseEnv.__init__() call")
             delays[name] = value
+        elif isinstance(value, logging.Logger):
+            value._inner = True
+            super().__setattr__(name, value)
         else:
             super().__setattr__(name, value)
 
@@ -94,7 +97,7 @@ class BaseEnv:
 
     @property
     def state(self):
-        return self._state
+        return self._state.copy()
 
     @state.setter
     def state(self, state):
@@ -225,11 +228,11 @@ class BaseEnv:
                         self._log_set_dot = False
                 if self.logger_callback:
                     data.update(self.logger_callback(t, **kwargs))
-                self.logger.record(**(data or dict(t=t, **self.observe_dict())))
+                self.logger._record(**(data or dict(t=t, **self.observe_dict())))
                 self.clock._tick_minor()
 
         # Update the systems' state
-        self.clock._tick_major()
+        self.clock._tick(t_hist.size - 1)
         self._state[:] = ode_hist[-1][:, None]
 
         return t_hist, ode_hist, done or self.clock.time_over()
@@ -323,7 +326,7 @@ class BaseSystem:
 
     @property
     def state(self):
-        return self._state
+        return self._state.copy()
 
     @state.setter
     def state(self, state):
@@ -375,7 +378,7 @@ class Sequential(BaseEnv):
 
 
 class Clock:
-    def __init__(self, dt, ode_step_len, max_t=10):
+    def __init__(self, dt, max_t, ode_step_len=1):
         self.dt = dt
         self.max_t = max_t
         self._interval = ode_step_len
@@ -397,8 +400,8 @@ class Clock:
         assert self._minor_index < self._interval
         self._minor_index += 1
 
-    def _tick(self):
-        self.index += 1
+    def _tick(self, step=1):
+        self.index += step
 
     @property
     def index(self):
