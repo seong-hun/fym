@@ -23,6 +23,8 @@ class Logger:
         self.max_len = int(max_len)
         self._info = {}
 
+        self._inner = False
+
         self.clear()
 
     @property
@@ -43,6 +45,10 @@ class Logger:
         self.index = 0
 
     def record(self, **kwargs):
+        assert not self._inner, "Inner loggers are not allowed to record directly"
+        self._record(**kwargs)
+
+    def _record(self, **kwargs):
         """Record a dictionary or a numeric data preserving the structure."""
         self._rec_update(self.buffer, kwargs)
         self.index += 1
