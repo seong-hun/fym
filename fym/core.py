@@ -97,7 +97,7 @@ class BaseEnv:
 
     @property
     def state(self):
-        return self._state
+        return self._state.copy()
 
     @state.setter
     def state(self, state):
@@ -326,7 +326,7 @@ class BaseSystem:
 
     @property
     def state(self):
-        return self._state
+        return self._state.copy()
 
     @state.setter
     def state(self, state):
