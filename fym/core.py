@@ -47,6 +47,7 @@ class BaseEnv:
         self.ode_func = self.ode_wrapper(self.set_dot)
         self.ode_option = ode_option
         self.tqdm_bar = None
+        self._registered = False
 
     def __getattr__(self, name):
         val = self.__dict__.get("_systems_dict", {}).get(name, None)
@@ -60,26 +61,28 @@ class BaseEnv:
         return super().__getattribute__(name)
 
     def __setattr__(self, name, value):
-        if isinstance(value, (BaseSystem, BaseEnv)):
+        if isinstance(value, (BaseSystem, BaseEnv)) and not value._registered:
             systems = self.__dict__.get("_systems_dict")
             if systems is None:
                 raise AttributeError(
                     "cannot assign system before BaseEnv.__init__() call")
             systems[name] = value
+            value._registered = True
             if isinstance(value, BaseEnv) or value._name is None:
                 value._name = name
             self.indexing()
+            return
         elif isinstance(value, Delay):
             delays = self.__dict__.get("_delays")
             if delays is None:
                 raise AttributeError(
                     "cannot assign delays before BaseEnv.__init__() call")
             delays[name] = value
+            return
         elif isinstance(value, logging.Logger):
             value._inner = True
-            super().__setattr__(name, value)
-        else:
-            super().__setattr__(name, value)
+
+        super().__setattr__(name, value)
 
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
@@ -317,6 +320,7 @@ class BaseSystem:
         self._name = name
 
         self.has_delay = False
+        self._registered = False
 
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
