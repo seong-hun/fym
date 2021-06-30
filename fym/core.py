@@ -220,22 +220,29 @@ class BaseEnv:
         # Log the inner history of states
         if self.logger:
             for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                self._state[:] = y[:, None]
-                data = {}
-                if self._log_set_dot:
-                    data.update(self.set_dot(t, **kwargs) or {})
-                    if not data:
-                        self._log_set_dot = False
-                if self.logger_callback:
-                    data.update(self.logger_callback(t, **kwargs))
-                self.logger._record(**(data or dict(t=t, **self.observe_dict())))
+                self._record(t, y, **kwargs)
                 self.clock._tick_minor()
 
         # Update the systems' state
-        self.clock._tick(t_hist.size - 1)
+        self.clock._tick_major()
         self._state[:] = ode_hist[-1][:, None]
 
+        done = done or self.clock.time_over()
+        if done:
+            self._record(self.clock.get(), self.state.ravel())
+
         return t_hist, ode_hist, done or self.clock.time_over()
+
+    def _record(self, t, y, **kwargs):
+        self._state[:] = y[:, None]
+        data = {}
+        if self._log_set_dot:
+            data.update(self.set_dot(t, **kwargs) or {})
+            if not data:
+                self._log_set_dot = False
+        if self.logger_callback:
+            data.update(self.logger_callback(t, **kwargs))
+        self.logger._record(**(data or dict(t=t, **self.observe_dict())))
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
@@ -395,6 +402,8 @@ class Clock:
     def _tick_major(self):
         self._major_index += 1
         self._minor_index = 0
+        if self.index > self._max_index:
+            self.index = self._max_index
 
     def _tick_minor(self):
         assert self._minor_index < self._interval
