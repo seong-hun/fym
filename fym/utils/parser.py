@@ -2,7 +2,7 @@ import numpy as np
 from types import SimpleNamespace as SN
 from functools import reduce
 import re
-import copy
+from copy import deepcopy
 
 
 class PrettySN(SN):
@@ -83,21 +83,35 @@ def parse(d={}):
     return encode(unwind_nested_dict(decode(d)))
 
 
-def update(sn, d):
+def update(sn, d, prune=False):
     """Update a SimpleNamespace with a dict or a SimpleNamespace"""
     if isinstance(sn, SN):
         sn = vars(sn)
     d = unwind_nested_dict(decode(d))
+
+    dtype = (dict, SN)
+
+    if prune:
+        for k, v in list(sn.items()):
+            if k in d and isinstance(v, dtype) and isinstance(d[k], dtype):
+                update(v, d[k], prune=prune)
+            elif k not in d:
+                del sn[k]
+
     for k, v in d.items():
-        if k in sn and isinstance(v, (dict, SN)) and isinstance(sn[k], (dict, SN)):
+        if k in sn and isinstance(v, dtype) and isinstance(sn[k], dtype):
             update(sn[k], v)
         else:
             sn[k] = encode(v)
 
 
+def copy(d):
+    return deepcopy(parse(d))
+
+
 def merge(d1, d2):
-    d = copy.deepcopy(parse(d1))
-    update(d, copy.deepcopy(parse(d2)))
+    d = deepcopy(parse(d1))
+    update(d, deepcopy(parse(d2)))
     return d
 
 
