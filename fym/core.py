@@ -375,9 +375,10 @@ class BaseSystem:
 class Sequential(BaseEnv):
     def __init__(self, *args, **kwargs):
         super().__init__()
-        for arg in args:
+        nargs = len(str(len(args)))
+        for i, arg in enumerate(args):
             assert isinstance(arg, (BaseEnv, BaseSystem))
-            setattr(self, arg.name, arg)
+            setattr(self, f"{arg.name}_{i:0{nargs}d}", arg)
 
         for k, v in kwargs.items():
             assert isinstance(v, (BaseEnv, BaseSystem))
