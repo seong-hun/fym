@@ -231,10 +231,10 @@ class BaseEnv:
         self._state[:] = ode_hist[-1][:, None]
 
         done = done or self.clock.time_over()
-        if done:
+        if done and self.logger:
             self._record(self.clock.get(), self.state.ravel(), **kwargs)
 
-        return t_hist, ode_hist, done or self.clock.time_over()
+        return t_hist, ode_hist, done
 
     def _record(self, t, y, **kwargs):
         self._state[:] = y[:, None]
