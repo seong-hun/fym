@@ -232,7 +232,7 @@ class BaseEnv:
 
         done = done or self.clock.time_over()
         if done:
-            self._record(self.clock.get(), self.state.ravel())
+            self._record(self.clock.get(), self.state.ravel(), **kwargs)
 
         return t_hist, ode_hist, done or self.clock.time_over()
 
