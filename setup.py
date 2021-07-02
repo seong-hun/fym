@@ -9,7 +9,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='fym',
-    version='1.1.3',
+    version='1.2.0',
     url='https://github.com/fdcl-nrf/fym',
     author='SNU FDCL',
     author_email='kshoon92@gmail.com',

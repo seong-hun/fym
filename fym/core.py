@@ -47,6 +47,7 @@ class BaseEnv:
         self.ode_func = self.ode_wrapper(self.set_dot)
         self.ode_option = ode_option
         self.tqdm_bar = None
+        self._registered = False
 
     def __getattr__(self, name):
         val = self.__dict__.get("_systems_dict", {}).get(name, None)
@@ -60,26 +61,28 @@ class BaseEnv:
         return super().__getattribute__(name)
 
     def __setattr__(self, name, value):
-        if isinstance(value, (BaseSystem, BaseEnv)):
+        if isinstance(value, (BaseSystem, BaseEnv)) and not value._registered:
             systems = self.__dict__.get("_systems_dict")
             if systems is None:
                 raise AttributeError(
                     "cannot assign system before BaseEnv.__init__() call")
             systems[name] = value
+            value._registered = True
             if isinstance(value, BaseEnv) or value._name is None:
                 value._name = name
             self.indexing()
+            return
         elif isinstance(value, Delay):
             delays = self.__dict__.get("_delays")
             if delays is None:
                 raise AttributeError(
                     "cannot assign delays before BaseEnv.__init__() call")
             delays[name] = value
+            return
         elif isinstance(value, logging.Logger):
             value._inner = True
-            super().__setattr__(name, value)
-        else:
-            super().__setattr__(name, value)
+
+        super().__setattr__(name, value)
 
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
@@ -220,22 +223,29 @@ class BaseEnv:
         # Log the inner history of states
         if self.logger:
             for t, y in zip(t_hist[:-1], ode_hist[:-1]):
-                self._state[:] = y[:, None]
-                data = {}
-                if self._log_set_dot:
-                    data.update(self.set_dot(t, **kwargs) or {})
-                    if not data:
-                        self._log_set_dot = False
-                if self.logger_callback:
-                    data.update(self.logger_callback(t, **kwargs))
-                self.logger._record(**(data or dict(t=t, **self.observe_dict())))
+                self._record(t, y, **kwargs)
                 self.clock._tick_minor()
 
         # Update the systems' state
-        self.clock._tick(t_hist.size - 1)
+        self.clock._tick_major()
         self._state[:] = ode_hist[-1][:, None]
 
+        done = done or self.clock.time_over()
+        if done:
+            self._record(self.clock.get(), self.state.ravel())
+
         return t_hist, ode_hist, done or self.clock.time_over()
+
+    def _record(self, t, y, **kwargs):
+        self._state[:] = y[:, None]
+        data = {}
+        if self._log_set_dot:
+            data.update(self.set_dot(t, **kwargs) or {})
+            if not data:
+                self._log_set_dot = False
+        if self.logger_callback:
+            data.update(self.logger_callback(t, **kwargs))
+        self.logger._record(**(data or dict(t=t, **self.observe_dict())))
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
@@ -310,6 +320,7 @@ class BaseSystem:
         self._name = name
 
         self.has_delay = False
+        self._registered = False
 
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
@@ -368,9 +379,10 @@ class BaseSystem:
 class Sequential(BaseEnv):
     def __init__(self, *args, **kwargs):
         super().__init__()
-        for arg in args:
+        nargs = len(str(len(args)))
+        for i, arg in enumerate(args):
             assert isinstance(arg, (BaseEnv, BaseSystem))
-            setattr(self, arg.name, arg)
+            setattr(self, f"{arg.name}_{i:0{nargs}d}", arg)
 
         for k, v in kwargs.items():
             assert isinstance(v, (BaseEnv, BaseSystem))
@@ -395,6 +407,8 @@ class Clock:
     def _tick_major(self):
         self._major_index += 1
         self._minor_index = 0
+        if self.index > self._max_index:
+            self.index = self._max_index
 
     def _tick_minor(self):
         assert self._minor_index < self._interval
