@@ -99,6 +99,10 @@ class BaseEnv:
         return self._systems_list
 
     @property
+    def systems_dict(self):
+        return self._systems_dict
+
+    @property
     def state(self):
         return self._state.copy()
 
@@ -382,7 +386,7 @@ class Sequential(BaseEnv):
         nargs = len(str(len(args)))
         for i, arg in enumerate(args):
             assert isinstance(arg, (BaseEnv, BaseSystem))
-            setattr(self, f"{arg.name}_{i:0{nargs}d}", arg)
+            setattr(self, f"{arg._name}_{i:0{nargs}d}", arg)
 
         for k, v in kwargs.items():
             assert isinstance(v, (BaseEnv, BaseSystem))

@@ -5,7 +5,7 @@ import re
 from copy import deepcopy
 
 
-class PrettySN(SN):
+class FymNamespace(SN):
     def __repr__(self, indent=0):
         items = ["{"]
         indent += 1
@@ -56,7 +56,7 @@ def encode(d):
     elif not isinstance(d, dict):
         return d
 
-    out = PrettySN()
+    out = FymNamespace()
     for k, v in d.items():
         if isinstance(v, dict):
             setattr(out, _make_clean(k), encode(v))
@@ -76,18 +76,24 @@ def decode(sn):
         if isinstance(val, (SN, dict)):
             val = decode(val)
         out.update({key: val})
-    return out
+    return unwind_nested_dict(out)
 
 
 def parse(d={}):
-    return encode(unwind_nested_dict(decode(d)))
+    """Pars:e a dict-like object"""
+    return encode(decode(d))
+    # return encode(decode(d))
 
 
-def update(sn, d, prune=False):
+def update(sn, d, copy_second=True, prune=False):
     """Update a SimpleNamespace with a dict or a SimpleNamespace"""
     if isinstance(sn, SN):
         sn = vars(sn)
-    d = unwind_nested_dict(decode(d))
+
+    if copy_second:
+        d = copy(d)
+
+    d = decode(d)
 
     dtype = (dict, SN)
 
@@ -106,12 +112,14 @@ def update(sn, d, prune=False):
 
 
 def copy(d):
-    return deepcopy(parse(d))
+    if isinstance(d, SN):
+        d = parse(d)
+    return deepcopy(d)
 
 
-def merge(d1, d2):
-    d = deepcopy(parse(d1))
-    update(d, deepcopy(parse(d2)))
+def merge(d1, d2, prune=False):
+    d = copy(d1)
+    update(d, copy(d2), prune=prune)
     return d
 
 
@@ -133,20 +141,20 @@ if __name__ == "__main__":
 
     cfg = parser.parse(json_dict)
 
-    # ``parser.update``
-    cfg = parser.parse()
+#     # ``parser.update``
+#     cfg = parser.parse()
 
-    def load_config():
-        parser.update(cfg, {
-            "env.kwargs": dict(dt=0.01, max_t=10),
-            "agent.memory_size": 1000,
-            "agent.minibatch_size": 32,
-        })
+#     def load_config():
+#         parser.update(cfg, {
+#             "env.kwargs": dict(dt=0.01, max_t=10),
+#             "agent.memory_size": 1000,
+#             "agent.minibatch_size": 32,
+#         })
 
-    load_config()
-    cfg.env.kwargs.dt = 0.001
+#     load_config()
+#     cfg.env.kwargs.dt = 0.001
 
-    # ``parser.decode``
-    cfg = parser.parse()
-    parser.update(cfg, {"env.kwargs": dict(dt=0.01, max_t=10)})
-    env = BaseEnv(**parser.decode(cfg.env.kwargs))
+#     # ``parser.decode``
+#     cfg = parser.parse()
+#     parser.update(cfg, {"env.kwargs": dict(dt=0.01, max_t=10)})
+#     env = BaseEnv(**parser.decode(cfg.env.kwargs))
