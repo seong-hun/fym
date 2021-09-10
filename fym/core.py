@@ -254,9 +254,10 @@ class BaseEnv:
     def ode_wrapper(self, func):
         @functools.wraps(func)
         def wrapper(y, t, *args):
-            self._state[:] = y[:, None]
+            _state_bak, self._state[:] = self.state.copy(), y[:, None]
             func(t, *args)
-            return self._dot.ravel()
+            self._state[:] = _state_bak
+            return self._dot.ravel().copy()
         return wrapper
 
     def update_delays(self, t_hist, ode_hist):
