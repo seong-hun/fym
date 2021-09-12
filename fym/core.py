@@ -99,6 +99,10 @@ class BaseEnv:
         return self._systems_list
 
     @property
+    def systems_dict(self):
+        return self._systems_dict
+
+    @property
     def state(self):
         return self._state.copy()
 
@@ -382,7 +386,7 @@ class Sequential(BaseEnv):
         nargs = len(str(len(args)))
         for i, arg in enumerate(args):
             assert isinstance(arg, (BaseEnv, BaseSystem))
-            setattr(self, f"{arg.name}_{i:0{nargs}d}", arg)
+            setattr(self, f"{arg._name}_{i:0{nargs}d}", arg)
 
         for k, v in kwargs.items():
             assert isinstance(v, (BaseEnv, BaseSystem))
@@ -476,12 +480,12 @@ class Delay:
 def rk4(func, y0, t, args=()):
     n = len(t)
     y = np.empty((n, len(y0)))
-    y[0] = y0
+    y[0] = y0.copy()
     for i in range(n - 1):
         h = t[i+1] - t[i]
-        k1 = func(y[i], t[i], *args)
-        k2 = func(y[i] + k1 * h / 2., t[i] + h / 2., *args)
-        k3 = func(y[i] + k2 * h / 2., t[i] + h / 2., *args)
-        k4 = func(y[i] + k3 * h, t[i] + h, *args)
+        k1 = func(y[i], t[i], *args).copy()
+        k2 = func(y[i] + k1 * h / 2., t[i] + h / 2., *args).copy()
+        k3 = func(y[i] + k2 * h / 2., t[i] + h / 2., *args).copy()
+        k4 = func(y[i] + k3 * h, t[i] + h, *args).copy()
         y[i+1] = y[i] + (h / 6.) * (k1 + 2*k2 + 2*k3 + k4)
     return y
