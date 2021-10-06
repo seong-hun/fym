@@ -11,6 +11,9 @@ import fym.logging as logging
 
 
 class BaseEnv:
+    """A base environment class.
+
+    """
     def __init__(self, dt=0.01, max_t=1, eager_stop=None,
                  logger=None, logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
@@ -316,6 +319,9 @@ class BaseEnv:
 
 
 class BaseSystem:
+    """A base system class.
+
+    """
     def __init__(self, initial_state=None, shape=(1, 1), name=None):
         if initial_state is None:
             initial_state = np.zeros(shape)
