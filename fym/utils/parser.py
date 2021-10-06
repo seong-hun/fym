@@ -49,6 +49,19 @@ def unwind_nested_dict(d):
     return result
 
 
+def wind(d, base="", delimiter="."):
+    result = {}
+    d = decode(d)
+    for k, v in d.items():
+        k = delimiter.join([base, k]) if base else k
+        if isinstance(v, dict):
+            v = wind(v, base=k, delimiter=delimiter)
+            result = dict(result, **v)
+        else:
+            result[k] = v
+    return result
+
+
 def encode(d):
     """Encode a dict to a SimpleNamespace"""
     if isinstance(d, SN):
