@@ -319,7 +319,8 @@ class BaseSystem:
     def __init__(self, initial_state=None, shape=(1, 1), name=None):
         if initial_state is None:
             initial_state = np.zeros(shape)
-        self.initial_state = initial_state
+        self._initial_state = initial_state.copy()
+        self._state = initial_state.copy()
         self.state_shape = self.initial_state.shape
         self._name = name
 
@@ -349,12 +350,11 @@ class BaseSystem:
 
     @property
     def initial_state(self):
-        return self._initial_state
+        return self._initial_state.copy()
 
     @initial_state.setter
     def initial_state(self, val):
         self._initial_state = np.atleast_1d(val)
-        self._state = self._initial_state.copy()
 
     @property
     def dot(self):
