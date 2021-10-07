@@ -18,6 +18,9 @@ class BaseEnv:
                  logger=None, logger_callback=None,
                  solver="rk4", ode_step_len=1, ode_option={},
                  name=None):
+        """Initialize.
+
+        """
         self._name = name or self.__class__.__name__
         self._systems_dict = dict()
         self._systems_list = self._systems_dict.values()
@@ -272,30 +275,40 @@ class BaseEnv:
 
     def set_dot(self, time, *args):
         """Overwrite this method with a custom method.
+
         Note that ``*args`` are fixed during integration.
         If you want to time-varying variables,
         i.e. state feedback control inputs, or time-varying commands,
         you should use exogeneous methods taking time or states
         where the states can be obatined by ``self.system.state``.
 
-        Sample code:
-            ```python
+        Parameters
+        ----------
+        time : float
+            The current time.
+
+        Example
+        -------
+
             def set_dot(self, time, action):
                 system = self.main_system
                 state = system.state
                 system.dot = system.A.dot(state) + system.B.dot(action)
-            ```
+
         """
         raise NotImplementedError
 
     def step(self):
-        """Sample code:
-            ```python
+        """Update one time step.
+
+        Example
+        -------
+
             def step(self):
                 self.update()
                 done = self.clock.time_over()
                 return self.observe_dict(), None, done, None
-            ```
+
         """
         raise NotImplementedError
 
@@ -320,6 +333,9 @@ class BaseEnv:
 
 class BaseSystem:
     """A base system class.
+
+    Use `state` attribute.
+    However, `BaseEnv.set_dot` is the method.
 
     """
     def __init__(self, initial_state=None, shape=(1, 1), name=None):
@@ -348,6 +364,7 @@ class BaseSystem:
 
     @property
     def state(self):
+        """The state attribure."""
         return self._state.copy()
 
     @state.setter

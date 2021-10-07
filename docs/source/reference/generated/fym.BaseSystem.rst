@@ -12,6 +12,7 @@
    .. rubric:: Methods
 
    .. autosummary::
+      :toctree: ./
    
       ~BaseSystem.__init__
       ~BaseSystem.distributing

@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 import os
 from datetime import datetime
-from .utils import parser
+import fym.parser
 
 
 class Logger:
@@ -67,7 +67,7 @@ class Logger:
             _info_save(h5file, self._info)
 
     def set_info(self, **kwargs):
-        parser.update(self._info, kwargs)
+        fym.parser.update(self._info, kwargs)
         with h5py.File(self.path, "r+") as h5file:
             _info_save(h5file, self._info)
 

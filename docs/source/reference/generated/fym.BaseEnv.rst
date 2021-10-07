@@ -12,6 +12,7 @@
    .. rubric:: Methods
 
    .. autosummary::
+      :toctree: ./
    
       ~BaseEnv.__init__
       ~BaseEnv.close

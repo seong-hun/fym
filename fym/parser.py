@@ -93,7 +93,7 @@ def decode(sn):
 
 
 def parse(d={}):
-    """Pars:e a dict-like object"""
+    """Parse a dict-like object"""
     return encode(decode(d))
     # return encode(decode(d))
 

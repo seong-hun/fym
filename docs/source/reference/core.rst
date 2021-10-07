@@ -1,15 +1,13 @@
 .. _core:
 
-Basic usage
-***********
+Core components
+***************
 
 .. currentmodule:: fym
 
-
-Core components
-===============
 .. autosummary::
    :toctree: generated/
+   :nosignatures:
 
    BaseEnv
    BaseSystem

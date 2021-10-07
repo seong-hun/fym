@@ -13,4 +13,7 @@ Fym Reference
    :maxdepth: 2
 
    core
+   logging
    config
+   parser
+

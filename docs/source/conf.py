@@ -13,6 +13,7 @@
 import re
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../..'))
 
 
@@ -42,10 +43,14 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode',
+    'myst_parser',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+# The suffix of source filenames.
+source_suffix = '.rst'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -81,6 +86,9 @@ html_file_suffix = '.html'
 
 htmlhelp_basename = 'fym'
 
+# If true, links to the reST sources are added to the pages.
+html_show_sourcelink = False
+
 # The reST default role (used for this markup: `text`) to use for all documents.
 default_role = "autolink"
 
@@ -95,7 +103,9 @@ add_function_parentheses = False
 # Autosummary
 # -----------------------------------------------------------------------------
 
+# Generate the API documentation when building
 autosummary_generate = True
+numpydoc_show_class_members = False
 
 # -----------------------------------------------------------------------------
 # Source code links
@@ -156,7 +166,7 @@ def linkcode_resolve(domain, info):
         if not fn:
             return None
 
-        # Ignore re-exports as their source files are not within the numpy repo
+        # Ignore re-exports as their source files are not within the fym repo
         module = inspect.getmodule(obj)
         if module is not None and not module.__name__.startswith("fym"):
             return None
