@@ -170,3 +170,12 @@ def sph2cart2(r, azimuth, polar):
     cart[1, 0] = y
     cart[2, 0] = z
     return cart
+
+
+def hat(v):
+    v1, v2, v3 = np.ravel(v)
+    return np.array([
+        [0, -v3, v2],
+        [v3, 0, -v1],
+        [-v2, v1, 0]
+    ])
