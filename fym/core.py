@@ -3,7 +3,7 @@ import functools
 import os
 
 import numpy as np
-from scipy.integrate import odeint
+from scipy.integrate import odeint, solve_ivp
 from scipy.interpolate import interp1d
 import tqdm
 
@@ -49,6 +49,20 @@ class BaseEnv:
             self.solver = odeint
         elif solver == "rk4":
             self.solver = rk4
+        elif solver == "solve_ivp":
+            def solver_wrapper(func, y0, t, args, **kwargs):
+                def fun(t, y):
+                    return func(y, t)
+                sol = solve_ivp(
+                    fun=fun,
+                    y0=y0,
+                    t_span=(t[0], t[-1]),
+                    t_eval=t,
+                    args=args,
+                    **kwargs
+                )
+                return sol.y.T
+            self.solver = solver_wrapper
 
         self.ode_func = self.ode_wrapper(self.set_dot)
         self.ode_option = ode_option
