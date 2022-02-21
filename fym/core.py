@@ -183,7 +183,7 @@ class BaseEnv:
         if state is None:
             for system in self._systems_list:
                 if isinstance(system, BaseSystem):
-                    res.append(system._state)
+                    res.append(system.state)
                 elif isinstance(system, BaseEnv):
                     res.append(system.observe_list())
         else:
@@ -200,7 +200,7 @@ class BaseEnv:
         if state is None:
             for name, system in self._systems_dict.items():
                 if isinstance(system, BaseSystem):
-                    res[name] = system._state
+                    res[name] = system.state
                 elif isinstance(system, BaseEnv):
                     res[name] = system.observe_dict()
         else:
@@ -214,7 +214,7 @@ class BaseEnv:
 
     def observe_vec(self, state=None):
         if state is None:
-            res = self._state
+            res = self.state
         else:
             res = []
             for system in self._systems_list:
@@ -226,7 +226,7 @@ class BaseEnv:
         return res
 
     def observe_flat(self):
-        return self._state.ravel()
+        return self.state.ravel()
 
     def update(self, **kwargs):
         t_hist = self.clock._get_interval_span()
@@ -245,7 +245,7 @@ class BaseEnv:
         self.update_delays(t_hist, ode_hist)
 
         # Log the inner history of states
-        if self.logger:
+        if self.logger is not None:
             for t, y in zip(t_hist[:-1], ode_hist[:-1]):
                 self._record(t, y, **kwargs)
                 self.clock._tick_minor()
@@ -255,7 +255,7 @@ class BaseEnv:
         self._state[:] = ode_hist[-1][:, None]
 
         done = done or self.clock.time_over()
-        if done and self.logger:
+        if done and self.logger is not None:
             self._record(self.clock.get(), self.state.ravel(), **kwargs)
 
         return t_hist, ode_hist, done
@@ -327,7 +327,7 @@ class BaseEnv:
         raise NotImplementedError
 
     def close(self):
-        if self.logger:
+        if self.logger is not None:
             self.logger.close()
         if self.tqdm_bar is not None:
             self.tqdm_bar.close()
