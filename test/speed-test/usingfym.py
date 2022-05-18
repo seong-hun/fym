@@ -1,14 +1,14 @@
-import numpy as np
-import scipy.io
 from collections import deque
 from functools import reduce
 
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io
 
+import fym.logging
+from fym.agents.LQR import clqr
 from fym.core import BaseEnv, BaseSystem, Delay
 from fym.utils import parser
-from fym.agents.LQR import clqr
-import fym.logging
 
 
 class Env(BaseEnv):
@@ -40,36 +40,35 @@ class Env(BaseEnv):
         dphi = self.Phi(x) - self.Phi(x_prev)
         dPhi = self.dPhi(x)
         D = dPhi @ cfg.B @ cfg.Rinv @ cfg.B.T @ dPhi.T
-        m = dphi / (dphi.T @ dphi + 1)**2
+        m = dphi / (dphi.T @ dphi + 1) ** 2
 
-        u = - 0.5 * cfg.Rinv @ cfg.B.T @ dPhi.T @ W2
-        n = 0.5 * np.exp(-0.1*t) * np.sum([
-            np.sin(5*t)**2 * np.cos(t),
-            np.sin(8*t)**2 * np.cos(0.1*t),
-            np.sin(-2*t)**2 * np.cos(0.5*t),
-            np.sin(t)**5
-        ])
+        u = -0.5 * cfg.Rinv @ cfg.B.T @ dPhi.T @ W2
+        n = (
+            0.5
+            * np.exp(-0.1 * t)
+            * np.sum(
+                [
+                    np.sin(5 * t) ** 2 * np.cos(t),
+                    np.sin(8 * t) ** 2 * np.cos(0.1 * t),
+                    np.sin(-2 * t) ** 2 * np.cos(0.5 * t),
+                    np.sin(t) ** 5,
+                ]
+            )
+        )
         u = u + n
 
         self.plant.dot = cfg.A @ x + cfg.B @ u
-        self.W1.dot = - cfg.agent.alp1 * m @ (dphi.T @ W1 + rho)
-        self.W2.dot = - cfg.agent.alp2 * (
-            cfg.agent.F2 * W2 - cfg.agent.F1 * W1
-            - 0.25 * D @ W2 @ m.T @ W1
+        self.W1.dot = -cfg.agent.alp1 * m @ (dphi.T @ W1 + rho)
+        self.W2.dot = -cfg.agent.alp2 * (
+            cfg.agent.F2 * W2 - cfg.agent.F1 * W1 - 0.25 * D @ W2 @ m.T @ W1
         )
         self.J.dot = self.Q(x) + 0.25 * W2.T @ D @ W2
 
         w1, w2, w3 = W1.ravel()
-        P = 0.5 * np.array([
-            [2 * w1, w2],
-            [w2, 2 * w3]
-        ])
+        P = 0.5 * np.array([[2 * w1, w2], [w2, 2 * w3]])
 
         w1, w2, w3 = W2.ravel()
-        K = 0.5 * cfg.Rinv @ cfg.B.T @ np.array([
-            [2 * w1, w2],
-            [w2, 2 * w3]
-        ])
+        K = 0.5 * cfg.Rinv @ cfg.B.T @ np.array([[2 * w1, w2], [w2, 2 * w3]])
 
         return dict(
             t=t,
@@ -88,45 +87,43 @@ class Env(BaseEnv):
 
     def dPhi(self, x):
         x1, x2 = x.ravel()
-        return np.array([
-            [2 * x1, 0],
-            [x2, x1],
-            [0, 2 * x2]
-        ])
+        return np.array([[2 * x1, 0], [x2, x1], [0, 2 * x2]])
 
 
 np.random.seed(0)
 
 # Parameter setup
-cfg = parser.parse({
-    "env": {
-        "max_t": 20,
-        "dt": 0.0025,
-    },
-    "initial_states": {
-        "plant": np.deg2rad(np.vstack((5, -5))),
-        "W1": 0.01 * np.random.rand(3, 1),
-        "W2": 0.01 * np.random.rand(3, 1),
-    },
-    "Q": np.diag([0.1, 0.1]),
-    "R": np.diag([0.1]),
-    "agent": {
-        "T": 0.01,
-        "F1": 1,
-        "F2": 1,
-        "alp1": 1e4,
-        "alp2": 1,
-    },
-})
+cfg = parser.parse(
+    {
+        "env": {
+            "max_t": 20,
+            "dt": 0.0025,
+        },
+        "initial_states": {
+            "plant": np.deg2rad(np.vstack((5, -5))),
+            "W1": 0.01 * np.random.rand(3, 1),
+            "W2": 0.01 * np.random.rand(3, 1),
+        },
+        "Q": np.diag([0.1, 0.1]),
+        "R": np.diag([0.1]),
+        "agent": {
+            "T": 0.01,
+            "F1": 1,
+            "F2": 1,
+            "alp1": 1e4,
+            "alp2": 1,
+        },
+    }
+)
 
 aerodata = scipy.io.loadmat("Data.mat", squeeze_me=True)
-parser.update(cfg, {
-    "A": np.array([
-        [aerodata["Za"], 1],
-        [aerodata["Ma"], aerodata["Mq"]]
-    ]),
-    "B": np.vstack([aerodata["Zdp"], aerodata["Mdp"]]),
-})
+parser.update(
+    cfg,
+    {
+        "A": np.array([[aerodata["Za"], 1], [aerodata["Ma"], aerodata["Mq"]]]),
+        "B": np.vstack([aerodata["Zdp"], aerodata["Mdp"]]),
+    },
+)
 
 cfg.Rinv = np.linalg.inv(cfg.R)
 

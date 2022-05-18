@@ -6,8 +6,7 @@ from fym.utils.plotting import PltModule
 
 np.random.seed(1)
 
-env = DynamicSoaringEnv(
-    initial_state=np.array([0, 0, -5, 13, 0, 0]).astype('float'))
+env = DynamicSoaringEnv(initial_state=np.array([0, 0, -5, 13, 0, 0]).astype("float"))
 
 time_step = 0.01
 time_series = np.arange(0, 2, time_step)
@@ -28,12 +27,12 @@ for i in time_series:
     obs = next_obs
     obs_series = np.vstack((obs_series, obs))
 
-time_series = time_series[:obs_series.shape[0]]
+time_series = time_series[: obs_series.shape[0]]
 
-data = {'traj': obs_series[:, 0:3]}
-variables = {'traj': ('x', 'y', 'z')}
-quantities = {'traj': ('distance', 'distance', 'distance')}
-labels = ('traj',)
+data = {"traj": obs_series[:, 0:3]}
+variables = {"traj": ("x", "y", "z")}
+quantities = {"traj": ("distance", "distance", "distance")}
+labels = ("traj",)
 a = PltModule(time_series, data, variables, quantities)
 a.plot_time(labels)
 a.plot_traj(labels)

@@ -1,7 +1,7 @@
-import usingfym
-import baseline
 import time
 
+import baseline
+import usingfym
 
 t0 = time.time()
 usingfym.run()

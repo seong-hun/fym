@@ -1,12 +1,13 @@
-'''
+"""
 PID control for SISO (single input single output) system
-'''
+"""
 import numpy as np
 
 
-class PID():
-    def __init__(self, pgain=0, igain=0, dgain=0,
-                 windup=False, method='euler', dt=0.01):
+class PID:
+    def __init__(
+        self, pgain=0, igain=0, dgain=0, windup=False, method="euler", dt=0.01
+    ):
         self.e_intg = 0
         self.e_prev = 0  # initial guess for differentiator
         self.windup = windup
@@ -16,7 +17,7 @@ class PID():
         self.i = igain
         self.d = dgain
 
-        if method == 'euler':
+        if method == "euler":
             self.integrate = intg_euler
             self.differentiate = diff_euler
 
@@ -53,7 +54,7 @@ def diff_euler(e, e_prev, dt):
     return (e - e_prev) / dt
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     e = 100
     gain = np.array([1, 2, 3])
     ctrllr = PID(gain)

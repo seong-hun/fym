@@ -1,14 +1,20 @@
-import os
-import numpy as np
 import math
-import matplotlib.pyplot as plt
+import os
 from collections import OrderedDict
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 import fym
 
 
-def plot(data_dict, draw_dict, weight_dict={}, save_dir="./",
-         option={"savefig": {"dpi": 150, "transparent": False}},):
+def plot(
+    data_dict,
+    draw_dict,
+    weight_dict={},
+    save_dir="./",
+    option={"savefig": {"dpi": 150, "transparent": False}},
+):
     figs = {}
     for fig_name in draw_dict:
         figs[fig_name] = plt.figure()
@@ -36,7 +42,7 @@ def _plot3d(figs, fig_name, fig_dict, data_dict, weight_dict):
             w_x, w_y, w_z = [np.ones(1), np.ones(1), np.ones(1)]  # broadcasting
         else:
             w_x, w_y, w_z = [weights_xyz[i] for i in range(3)]
-        X, Y, Z = w_x*data_x, w_y*data_y, w_z*data_z
+        X, Y, Z = w_x * data_x, w_y * data_y, w_z * data_z
         # plot properties
         plot_property_dict = {}
         for key in ["c", "label", "alpha"]:
@@ -80,7 +86,7 @@ def _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict):
             data_y_dim = data_y.shape[1]
         for i in range(data_y_dim):
             if i_plt == 0:
-                ax.append(figs[fig_name].add_subplot(data_y_dim, 1, i+1))
+                ax.append(figs[fig_name].add_subplot(data_y_dim, 1, i + 1))
             # weight
             w_x = weight_dict.get(x_name)
             if w_x is None:
@@ -90,7 +96,7 @@ def _plot2d(figs, fig_name, fig_dict, data_dict, weight_dict):
                 w_y = np.ones(1)  # broadcasting
             else:
                 w_y = w_ys[i]
-            X, Y = w_x*data_x, w_y*data_y[:, i]
+            X, Y = w_x * data_x, w_y * data_y[:, i]
             # plot properties
             plot_property_dict = {}
             for key in ["c", "label", "alpha"]:
@@ -125,7 +131,7 @@ def _get_plot_property(fig_dict, key, i_plt):
     if values is None:
         value = None
     else:
-        if len(values) < (i_plt+1):
+        if len(values) < (i_plt + 1):
             value = None  # default value
         else:
             value = values[i_plt]
@@ -139,13 +145,21 @@ def _axis_equal(ax, weighted_data_list=None, projection="2d"):
         X, Y, Z = weighted_data_list
         # ax should be a 3d figure
         # Create cubic bounding box to simulate equal aspect ratio
-        max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max()
-        Xb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][0].flatten() + 0.5*(X.max()+X.min())
-        Yb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][1].flatten() + 0.5*(Y.max()+Y.min())
-        Zb = 0.5*max_range*np.mgrid[-1:2:2, -1:2:2, -1:2:2][2].flatten() + 0.5*(Z.max()+Z.min())
+        max_range = np.array(
+            [X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]
+        ).max()
+        Xb = 0.5 * max_range * np.mgrid[-1:2:2, -1:2:2, -1:2:2][0].flatten() + 0.5 * (
+            X.max() + X.min()
+        )
+        Yb = 0.5 * max_range * np.mgrid[-1:2:2, -1:2:2, -1:2:2][1].flatten() + 0.5 * (
+            Y.max() + Y.min()
+        )
+        Zb = 0.5 * max_range * np.mgrid[-1:2:2, -1:2:2, -1:2:2][2].flatten() + 0.5 * (
+            Z.max() + Z.min()
+        )
         for xb, yb, zb in zip(Xb, Yb, Zb):
-            ax.plot([xb], [yb], [zb], 'w')
+            ax.plot([xb], [yb], [zb], "w")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

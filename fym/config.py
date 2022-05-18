@@ -1,4 +1,5 @@
 from functools import reduce
+
 import fym
 
 default_settings = fym.parser.parse()

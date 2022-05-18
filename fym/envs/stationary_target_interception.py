@@ -1,8 +1,8 @@
 """DEPRECATED"""
 import numpy as np
 
-from fym.models.missile import MissilePlanar
 from fym.core import BaseEnv
+from fym.models.missile import MissilePlanar
 
 
 class StationaryTargetEnv(BaseEnv):
@@ -15,7 +15,7 @@ class StationaryTargetEnv(BaseEnv):
 
     def reset(self, noise=0):
         super().reset()
-        self.states['missile'] += np.random.uniform(-noise, noise)
+        self.states["missile"] += np.random.uniform(-noise, noise)
         return self.get_ob()
 
     def step(self, action):
@@ -23,22 +23,22 @@ class StationaryTargetEnv(BaseEnv):
         # These lines will be replaced with
         #   controls = dict(aircraft=action)
         lb, ub = self.action_space.low, self.action_space.high
-        missile_control = (lb + ub)/2 + (ub - lb)/2*np.asarray(action)
+        missile_control = (lb + ub) / 2 + (ub - lb) / 2 * np.asarray(action)
         controls = dict(missile=missile_control)
         # ----------------------------------------------------------------------
 
         states = self.states.copy()
         next_obs, reward, done, _ = super().step(controls)
-        info = {'states': states, 'next_states': self.states}
+        info = {"states": states, "next_states": self.states}
         return next_obs, reward, done, info
 
     def get_ob(self):
-        states = self.states['missile']
+        states = self.states["missile"]
         return states
 
     def terminal(self):
-        state = self.states['missile']
-        system = self.systems['missile']
+        state = self.states["missile"]
+        system = self.systems["missile"]
         lb, ub = system.state_lower_bound, system.state_upper_bound
         if not np.all([state > lb, state < ub]):
             return True
@@ -46,8 +46,8 @@ class StationaryTargetEnv(BaseEnv):
             return False
 
     def get_reward(self, controls):
-        state = self.states['missile'][:2]
-        goal_state = [0, 0]      # target position
+        state = self.states["missile"][:2]
+        goal_state = [0, 0]  # target position
         error = self.weight_norm(state - goal_state, [1, 1])
         return -error
 
@@ -59,5 +59,5 @@ class StationaryTargetEnv(BaseEnv):
         return np.sqrt(np.dot(np.dot(v, W), v))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     env = StationaryTargetEnv()

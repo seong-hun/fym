@@ -22,16 +22,19 @@ def jacob_analytic(function, i=0):
     jacob_fnc : callable
         jacobian function of ``function``
     """
+
     def new_fun(*argument):
         argument = list(argument)
         argument[0], argument[i] = argument[i], argument[0]
         return function(*argument)
+
     jacob_temp = nd.Jacobian(new_fun)
 
     def jacob_fnc(*argument):
         argument = list(argument)
         argument[0], argument[i] = argument[i], argument[0]
         return jacob_temp(*argument)
+
     return jacob_fnc
 
 

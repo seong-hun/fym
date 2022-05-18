@@ -1,6 +1,7 @@
+import time
+
 import numpy as np
 from scipy.integrate import odeint
-import time
 
 import fym
 import fym.core as core
@@ -40,7 +41,7 @@ class FastEnv(core.BaseEnv):
             y0=state,
             t=time + self.t_span,
             args=(action,),
-            tfirst=True
+            tfirst=True,
         )
         next_state = ode_hist[-1]
 
@@ -116,11 +117,15 @@ def run(env, agent=None, number=1, text=""):
 
     env.close()
 
-    print("\t".join([
-        f"{text}:",
-        f"{number} Runs,",
-        f"Total: {t1 - t0:.4} sec",
-    ]))
+    print(
+        "\t".join(
+            [
+                f"{text}:",
+                f"{number} Runs,",
+                f"Total: {t1 - t0:.4} sec",
+            ]
+        )
+    )
 
     return t1 - t0
 
@@ -140,10 +145,14 @@ def test_linear_system():
     agent = Lqr(env.main)
     t2 = run(env, agent, number, "Fast Env (Euler integral)")
 
-    print("\t".join([
-        f"{t0/t2:5.2f}",
-        f"{t1/t2:5.2f}",
-    ]))
+    print(
+        "\t".join(
+            [
+                f"{t0/t2:5.2f}",
+                f"{t1/t2:5.2f}",
+            ]
+        )
+    )
 
 
 if __name__ == "__main__":

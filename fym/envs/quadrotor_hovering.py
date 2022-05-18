@@ -3,9 +3,9 @@ import numpy as np
 import numpy.linalg as nla
 from scipy.spatial.transform import Rotation as R
 
-from fym.models.quadrotor import Quadrotor
-from fym.core import BaseEnv
 from fym.agents.PID import PID
+from fym.core import BaseEnv
+from fym.models.quadrotor import Quadrotor
 
 
 class QuadrotorHoveringEnv(BaseEnv):
@@ -15,10 +15,7 @@ class QuadrotorHoveringEnv(BaseEnv):
     pid_roll = PID(1.0 * np.array([1.0, 0.1, 1.0]), windup=False)
 
     allocation_matrix = nla.inv(
-        [[0, 1, 0, -1],
-         [-1, 0, 1, 0],
-         [1, 1, 1, 1],
-         [1, -1, 1, -1]]
+        [[0, 1, 0, -1], [-1, 0, 1, 0], [1, 1, 1, 1], [1, -1, 1, -1]]
     )
 
     def __init__(self, initial_state, dt=0.01):
@@ -28,7 +25,7 @@ class QuadrotorHoveringEnv(BaseEnv):
 
     def reset(self, noise=0):
         super().reset()
-        self.states['quadrotor'] += np.random.uniform(-noise, noise)
+        self.states["quadrotor"] += np.random.uniform(-noise, noise)
         return self.get_ob()
 
     def step(self, action):
@@ -36,7 +33,7 @@ class QuadrotorHoveringEnv(BaseEnv):
         y_goal = action
 
         # inner-loop PID control
-        quad = self.systems['quadrotor']
+        quad = self.systems["quadrotor"]
         y = np.array([-1, 1, 1]) * self.get_ob()[[2, 4, 5]]
         e_y = y - y_goal
         f1234_sum = self.pid_height.get(-e_y[0]) + quad.m * quad.g
@@ -44,24 +41,25 @@ class QuadrotorHoveringEnv(BaseEnv):
         f24_diff = self.pid_roll.get(e_y[2])
 
         quadrotor_control = self.allocation_matrix.dot(
-            [f24_diff, f31_diff, f1234_sum, 0])
+            [f24_diff, f31_diff, f1234_sum, 0]
+        )
         controls = dict(quadrotor=quadrotor_control)
         # ----------------------------------------------------------------------
 
         states = self.states.copy()
         next_obs, reward, done, _ = super().step(controls)
-        info = {'states': states, 'next_states': self.states}
+        info = {"states": states, "next_states": self.states}
         return next_obs, reward, done, info
 
     def get_ob(self):
-        state = self.states['quadrotor']
+        state = self.states["quadrotor"]
         position = state[:3]
-        euler_angles = R.from_dcm(state[6:15].reshape(3, 3)).as_euler('ZYX')
+        euler_angles = R.from_dcm(state[6:15].reshape(3, 3)).as_euler("ZYX")
         return np.hstack((position, euler_angles))
 
     def terminal(self):
-        state = self.states['quadrotor']
-        system = self.systems['quadrotor']
+        state = self.states["quadrotor"]
+        system = self.systems["quadrotor"]
         lb, ub = system.state_lower_bound, system.state_upper_bound
         if not np.all([state > lb, state < ub]):
             return True
@@ -69,7 +67,7 @@ class QuadrotorHoveringEnv(BaseEnv):
             return False
 
     def get_reward(self, controls):
-        att = self.states['quadrotor'][3:5]  # goal attitude (roll, pitch)
+        att = self.states["quadrotor"][3:5]  # goal attitude (roll, pitch)
         att_goal = [0, 0]
         error = self.weight_norm(att - att_goal, [1, 1])
         return -error
@@ -82,5 +80,5 @@ class QuadrotorHoveringEnv(BaseEnv):
         return np.sqrt(np.dot(np.dot(v, W), v))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     env = QuadrotorHoveringEnv()

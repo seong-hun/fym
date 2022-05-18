@@ -1,8 +1,9 @@
-import numpy as np
-from types import SimpleNamespace as SN
-from functools import reduce
 import re
 from copy import deepcopy
+from functools import reduce
+from types import SimpleNamespace as SN
+
+import numpy as np
 
 
 class FymNamespace(SN):
@@ -15,8 +16,7 @@ class FymNamespace(SN):
                 item += val.__repr__(indent)
             elif isinstance(val, np.ndarray):
                 if val.ndim > 1 and val.shape[0] > 1:
-                    item += np.array2string(
-                        val, prefix=" " * len(item))
+                    item += np.array2string(val, prefix=" " * len(item))
             else:
                 item += str(val)
             item += ","
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     json_dict = {
         "env.kwargs": dict(dt=0.01, max_t=10),
         "multicopter.nrotor": 6,
-        "multicopter.m": 3.,
+        "multicopter.m": 3.0,
         "multicopter.LQRGain": {
             "Q": [1, 1, 1, 1],
             "R": [1, 1],

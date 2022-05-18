@@ -2,64 +2,65 @@
 import numpy as np
 import numpy.linalg as nla
 import scipy.linalg as sla
-
-from fym.core import BaseEnv, BaseSystem, infinite_box
-import fym.logging as logging
-
 from utils import assign_2d
+
+import fym.logging as logging
+from fym.core import BaseEnv, BaseSystem, infinite_box
 
 
 class MracEnv(BaseEnv):
     def __init__(self, spec, data_callback=None):
-        A = Ar = spec['reference_system']['Ar']
-        B = spec['main_system']['B']
-        Br = spec['reference_system']['Br']
-        self.unc = ParamUnc(real_param=spec['main_system']['real_param'])
+        A = Ar = spec["reference_system"]["Ar"]
+        B = spec["main_system"]["B"]
+        Br = spec["reference_system"]["Br"]
+        self.unc = ParamUnc(real_param=spec["main_system"]["real_param"])
         self.cmd = SquareCmd(
             length=spec["command"]["length"],
             phase=spec["command"]["phase"],
-            pattern=spec["command"]["pattern"]
+            pattern=spec["command"]["pattern"],
         )
         self.data_callback = data_callback
 
         systems = {
-            'main_system': MainSystem(
-                initial_state=spec['main_system']['initial_state'],
+            "main_system": MainSystem(
+                initial_state=spec["main_system"]["initial_state"],
                 A=A,
                 B=B,
                 Br=Br,
                 unc=self.unc,
                 cmd=self.cmd,
             ),
-            'reference_system': RefSystem(
-                initial_state=spec['reference_system']['initial_state'],
+            "reference_system": RefSystem(
+                initial_state=spec["reference_system"]["initial_state"],
                 Ar=Ar,
                 Br=Br,
-                cmd=self.cmd
+                cmd=self.cmd,
             ),
-            'adaptive_system': AdaptiveSystem(
-                initial_state=spec['adaptive_system']['initial_state'],
+            "adaptive_system": AdaptiveSystem(
+                initial_state=spec["adaptive_system"]["initial_state"],
                 A=A,
                 B=B,
-                gamma1=spec['adaptive_system']['gamma1'],
-                Q=spec['adaptive_system']['Q'],
-                unc=self.unc
-            )
+                gamma1=spec["adaptive_system"]["gamma1"],
+                Q=spec["adaptive_system"]["Q"],
+                unc=self.unc,
+            ),
         }
 
-        self.observation_space = infinite_box((
-            len(spec['main_system']['initial_state'])
-            + len(spec['reference_system']['initial_state']),
-            + len(np.ravel(spec['adaptive_system']['initial_state'])),
-            + np.shape(Br)[1],
-        ))
+        self.observation_space = infinite_box(
+            (
+                len(spec["main_system"]["initial_state"])
+                + len(spec["reference_system"]["initial_state"]),
+                +len(np.ravel(spec["adaptive_system"]["initial_state"])),
+                +np.shape(Br)[1],
+            )
+        )
         self.action_space = infinite_box([])
 
         super().__init__(
             systems=systems,
-            dt=spec['environment']['time_step'],
-            max_t=spec['environment']['final_time'],
-            ode_step_len=spec['environment']['ode_step_len'],
+            dt=spec["environment"]["time_step"],
+            max_t=spec["environment"]["final_time"],
+            ode_step_len=spec["environment"]["ode_step_len"],
         )
 
     def step(self, action):
@@ -99,10 +100,9 @@ class MracEnv(BaseEnv):
         u = -W.T.dot(self.unc.basis(x))
 
         xdot = {
-            'main_system': self.systems['main_system'].deriv(t, x, u),
-            'reference_system': self.systems['reference_system'].deriv(t, xr),
-            'adaptive_system': self.systems['adaptive_system'].deriv(
-                W, x, e),
+            "main_system": self.systems["main_system"].deriv(t, x, u),
+            "reference_system": self.systems["reference_system"].deriv(t, xr),
+            "adaptive_system": self.systems["adaptive_system"].deriv(W, x, e),
         }
         return self.unpack_state(xdot)
 
@@ -122,36 +122,37 @@ class MracEnv(BaseEnv):
             self.data_callback(self, data)
 
     def data_postprocessing(self, data):
-        xs = data['state']['main_system']
-        Ws = data['state']['adaptive_system']
+        xs = data["state"]["main_system"]
+        Ws = data["state"]["adaptive_system"]
 
-        cmd = np.hstack([self.cmd.get(t) for t in data['time']])
-        u_mrac = np.vstack(
-            [-W.T.dot(self.unc.basis(x)) for W, x in zip(Ws, xs)])
+        cmd = np.hstack([self.cmd.get(t) for t in data["time"]])
+        u_mrac = np.vstack([-W.T.dot(self.unc.basis(x)) for W, x in zip(Ws, xs)])
 
-        data.update({
-            "control": u_mrac,
-            "cmd": cmd,
-        })
+        data.update(
+            {
+                "control": u_mrac,
+                "cmd": cmd,
+            }
+        )
         return data
 
 
 class CmracEnv(MracEnv):
     def __init__(self, spec, data_callback):
         super().__init__(spec, data_callback)
-        self.gamma2 = spec['composite_system']['gamma2']
+        self.gamma2 = spec["composite_system"]["gamma2"]
 
         new_systems = {
-            'filter_system': FilterSystem(
-                initial_state=spec['filter_system']['initial_state'],
-                A=spec['reference_system']['Ar'],
-                B=spec['main_system']['B'],
-                tau=spec['filter_system']['tau']
+            "filter_system": FilterSystem(
+                initial_state=spec["filter_system"]["initial_state"],
+                A=spec["reference_system"]["Ar"],
+                B=spec["main_system"]["B"],
+                tau=spec["filter_system"]["tau"],
             ),
-            'filtered_phi': FilteredPhi(
-                initial_state=spec['filtered_phi']['initial_state'],
-                tau=spec['filter_system']['tau'],
-                unc=self.unc
+            "filtered_phi": FilteredPhi(
+                initial_state=spec["filtered_phi"]["initial_state"],
+                tau=spec["filter_system"]["tau"],
+                unc=self.unc,
             ),
         }
         self.append_systems(new_systems)
@@ -173,7 +174,7 @@ class CmracEnv(MracEnv):
         """
         x, xr, _, z, phif = states.values()
         e = x - xr
-        y = self.systems['filter_system'].get_y(z, e)
+        y = self.systems["filter_system"].get_y(z, e)
         norm_phif = nla.norm(phif) + self.norm_eps
         normed_phi = phif / norm_phif
         obs = dict(**states, time=time, y=y, normed_phi=normed_phi)
@@ -185,18 +186,18 @@ class CmracEnv(MracEnv):
         has a matrix form.
         """
         x, xr, W, z, phif = states.values()
-        M, N = action['M'], action['N']
+        M, N = action["M"], action["N"]
 
         e = x - xr
         u = -W.T.dot(self.unc.basis(x))
 
         xdot = {
-            'main_system': self.systems['main_system'].deriv(t, x, u),
-            'reference_system': self.systems['reference_system'].deriv(t, xr),
-            'adaptive_system': self.systems['adaptive_system'].deriv(
-                W, x, e) - np.dot(self.gamma2, M.dot(W) - N),
-            'filter_system': self.systems['filter_system'].deriv(z, e, u),
-            'filtered_phi': self.systems['filtered_phi'].deriv(phif, x),
+            "main_system": self.systems["main_system"].deriv(t, x, u),
+            "reference_system": self.systems["reference_system"].deriv(t, xr),
+            "adaptive_system": self.systems["adaptive_system"].deriv(W, x, e)
+            - np.dot(self.gamma2, M.dot(W) - N),
+            "filter_system": self.systems["filter_system"].deriv(z, e, u),
+            "filtered_phi": self.systems["filtered_phi"].deriv(phif, x),
         }
         return self.unpack_state(xdot)
 
@@ -209,7 +210,7 @@ class ParamUnc:
         return self.W.T.dot(self.basis(state))
 
     def basis(self, x):
-        return np.hstack((x[:2], np.abs(x[:2])*x[1], x[0]**3))
+        return np.hstack((x[:2], np.abs(x[:2]) * x[1], x[0] ** 3))
 
 
 class SquareCmd:
@@ -236,9 +237,7 @@ class SquareCmd:
         """
         t = t - self.phase
         if t > 0:
-            s = self.pattern[
-                int((t % self.period) / self.period * len(self.pattern))
-            ]
+            s = self.pattern[int((t % self.period) / self.period * len(self.pattern))]
         else:
             s = 0
         return np.atleast_1d(s)
@@ -290,11 +289,7 @@ class AdaptiveSystem(BaseSystem):
 
     def deriv(self, W, x, e):
         # M, N = composite_input['M'], composite_input['N']
-        Wdot = (
-            np.dot(
-                self.gamma1, np.outer(self.basis(x), e)
-            ).dot(self.P).dot(self.B)
-        )
+        Wdot = np.dot(self.gamma1, np.outer(self.basis(x), e)).dot(self.P).dot(self.B)
         return Wdot
 
 
@@ -306,11 +301,7 @@ class FilterSystem(BaseSystem):
         self.tau = tau
 
     def deriv(self, z, e, u):
-        zdot = (
-            1 / self.tau * (self.Bh.dot(e) - z)
-            + self.Bh.dot(self.A).dot(e)
-            + u
-        )
+        zdot = 1 / self.tau * (self.Bh.dot(e) - z) + self.Bh.dot(self.A).dot(e) + u
         return zdot
 
     def get_y(self, z, e):
@@ -330,9 +321,7 @@ class FilteredPhi(BaseSystem):
 
 
 def mul_dist(dist, phi_mem, xs):
-    res = sum([
-        d * np.outer(phi, x) for d, phi, x in zip(dist, phi_mem, xs)
-    ])
+    res = sum([d * np.outer(phi, x) for d, phi, x in zip(dist, phi_mem, xs)])
     return res
 
 
