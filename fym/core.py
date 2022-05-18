@@ -1,11 +1,9 @@
-import itertools
 import functools
-import os
 
 import numpy as np
+import tqdm
 from scipy.integrate import odeint, solve_ivp
 from scipy.interpolate import interp1d
-import tqdm
 
 import fym.logging as logging
 
@@ -238,6 +236,9 @@ class BaseEnv:
             **self.ode_option
         )
 
+        self._state[:] = ode_hist[0][:, None]
+        info = self.set_dot(t_hist[0], **kwargs) or {}
+
         done = False
         if self.eager_stop:
             t_hist, ode_hist, done = self.eager_stop(t_hist, ode_hist)
@@ -258,7 +259,7 @@ class BaseEnv:
         if done and self.logger is not None:
             self._record(self.clock.get(), self.state.ravel(), **kwargs)
 
-        return t_hist, ode_hist, done
+        return info, done
 
     def _record(self, t, y, **kwargs):
         self._state[:] = y[:, None]
@@ -355,8 +356,8 @@ class BaseSystem:
     def __init__(self, initial_state=None, shape=(1, 1), name=None):
         if initial_state is None:
             initial_state = np.zeros(shape)
-        self._initial_state = initial_state.copy()
-        self._state = initial_state.copy()
+        self._initial_state = np.copy(np.atleast_1d(initial_state))
+        self._state = np.copy(self._initial_state)
         self.state_shape = self.initial_state.shape
         self._name = name
 
