@@ -1,4 +1,4 @@
-from . import config, parser
+from . import parser
 from ._version import __version__
 from .agents.LQR import clqr, dlqr
 from .core import BaseEnv, BaseSystem, Sequential
