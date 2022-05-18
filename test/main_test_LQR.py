@@ -1,4 +1,5 @@
 import numpy as np
+
 from fym.agents.LQR.LQR import LQR
 
 A = np.array([[1, 2], [2, -1]])

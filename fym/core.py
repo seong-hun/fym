@@ -9,16 +9,21 @@ import fym.logging as logging
 
 
 class BaseEnv:
-    """A base environment class.
+    """A base environment class."""
 
-    """
-    def __init__(self, dt=0.01, max_t=1, eager_stop=None,
-                 logger=None, logger_callback=None,
-                 solver="rk4", ode_step_len=1, ode_option={},
-                 name=None):
-        """Initialize.
-
-        """
+    def __init__(
+        self,
+        dt=0.01,
+        max_t=1,
+        eager_stop=None,
+        logger=None,
+        logger_callback=None,
+        solver="rk4",
+        ode_step_len=1,
+        ode_option={},
+        name=None,
+    ):
+        """Initialize."""
         self._name = name or self.__class__.__name__
         self._systems_dict = dict()
         self._systems_list = self._systems_dict.values()
@@ -48,18 +53,16 @@ class BaseEnv:
         elif solver == "rk4":
             self.solver = rk4
         elif solver == "solve_ivp":
+
             def solver_wrapper(func, y0, t, args, **kwargs):
                 def fun(t, y):
                     return func(y, t)
+
                 sol = solve_ivp(
-                    fun=fun,
-                    y0=y0,
-                    t_span=(t[0], t[-1]),
-                    t_eval=t,
-                    args=args,
-                    **kwargs
+                    fun=fun, y0=y0, t_span=(t[0], t[-1]), t_eval=t, args=args, **kwargs
                 )
                 return sol.y.T
+
             self.solver = solver_wrapper
 
         self.ode_func = self.ode_wrapper(self.set_dot)
@@ -83,7 +86,8 @@ class BaseEnv:
             systems = self.__dict__.get("_systems_dict")
             if systems is None:
                 raise AttributeError(
-                    "cannot assign system before BaseEnv.__init__() call")
+                    "cannot assign system before BaseEnv.__init__() call"
+                )
             systems[name] = value
             value._registered = True
             if isinstance(value, BaseEnv) or value._name is None:
@@ -94,7 +98,8 @@ class BaseEnv:
             delays = self.__dict__.get("_delays")
             if delays is None:
                 raise AttributeError(
-                    "cannot assign delays before BaseEnv.__init__() call")
+                    "cannot assign delays before BaseEnv.__init__() call"
+                )
             delays[name] = value
             return
         elif isinstance(value, logging.Logger):
@@ -150,14 +155,14 @@ class BaseEnv:
     def indexing(self):
         start = 0
         for system in self._systems_list:
-            system.state_size = functools.reduce(
-                lambda a, b: a * b, system.state_shape)
+            system.state_size = functools.reduce(lambda a, b: a * b, system.state_shape)
             system.flat_index = slice(start, start + system.state_size)
             start += system.state_size
 
-        self.state_shape = (sum([
-            system.state_size for system in self._systems_list
-        ]), 1)
+        self.state_shape = (
+            sum([system.state_size for system in self._systems_list]),
+            1,
+        )
 
         self._state = np.empty(self.state_shape)
         self._dot = np.empty(self.state_shape)
@@ -165,10 +170,11 @@ class BaseEnv:
 
     def distributing(self):
         for system in self._systems_list:
-            system._state, system.state = self._state[system.flat_index].reshape(
-                system.state_shape), system._state
-            system._dot = self._dot[system.flat_index].reshape(
-                system.state_shape)
+            system._state, system.state = (
+                self._state[system.flat_index].reshape(system.state_shape),
+                system._state,
+            )
+            system._dot = self._dot[system.flat_index].reshape(system.state_shape)
             system.distributing()
 
     def reset(self):
@@ -187,8 +193,7 @@ class BaseEnv:
         else:
             for system in self._systems_list:
                 if isinstance(system, BaseSystem):
-                    res.append(
-                        state[system.flat_index].reshape(system.state_shape))
+                    res.append(state[system.flat_index].reshape(system.state_shape))
                 elif isinstance(system, BaseEnv):
                     res.append(system.observe_list(state[system.flat_index]))
         return res
@@ -204,8 +209,7 @@ class BaseEnv:
         else:
             for name, system in self._systems_dict.items():
                 if isinstance(system, BaseSystem):
-                    res[name] = state[system.flat_index].reshape(
-                        system.state_shape)
+                    res[name] = state[system.flat_index].reshape(system.state_shape)
                 elif isinstance(system, BaseEnv):
                     res[name] = system.observe_dict(state[system.flat_index])
         return res
@@ -233,7 +237,7 @@ class BaseEnv:
             y0=self._state.ravel(),
             t=t_hist,
             args=tuple(kwargs.values()),
-            **self.ode_option
+            **self.ode_option,
         )
 
         self._state[:] = ode_hist[0][:, None]
@@ -278,6 +282,7 @@ class BaseEnv:
             self._state[:] = y[:, None]
             func(t, *args)
             return self._dot.ravel()
+
         return wrapper
 
     def update_delays(self, t_hist, ode_hist):
@@ -336,10 +341,7 @@ class BaseEnv:
     def render(self, mode="tqdm", desc=None, **kwargs):
         if mode == "tqdm":
             if self.tqdm_bar is None or self.clock.get() == 0:
-                self.tqdm_bar = tqdm.tqdm(
-                    total=self.clock.max_len,
-                    **kwargs
-                )
+                self.tqdm_bar = tqdm.tqdm(total=self.clock.max_len, **kwargs)
 
             self.tqdm_bar.update(1)
             if desc:
@@ -353,6 +355,7 @@ class BaseSystem:
     However, `BaseEnv.set_dot` is the method.
 
     """
+
     def __init__(self, initial_state=None, shape=(1, 1), name=None):
         if initial_state is None:
             initial_state = np.zeros(shape)
@@ -367,11 +370,7 @@ class BaseSystem:
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
         base = base + [name]
-        result = [
-            f"<{' - '.join(base)}>",
-            "state:",
-            f"{self.state}"
-        ]
+        result = [f"<{' - '.join(base)}>", "state:", f"{self.state}"]
         if hasattr(self, "dot"):
             result += ["dot:", f"{self.dot}"]
         result.append("")
@@ -443,7 +442,7 @@ class Clock:
         self.max_len = int(np.ceil(max_t / dt))
         self._max_index = len(self.tspan) - 1
 
-    def reset(self, t=0.):
+    def reset(self, t=0.0):
         self.index = np.flatnonzero(self.tspan == t)[0].item()
 
     def _tick_major(self):
@@ -478,7 +477,7 @@ class Clock:
             return t >= self.max_t
 
     def _get_interval_span(self):
-        return self.tspan[self.index:self.index + self._interval + 1]
+        return self.tspan[self.index : self.index + self._interval + 1]
 
 
 class Delay:
@@ -520,10 +519,10 @@ def rk4(func, y0, t, args=()):
     y = np.empty((n, len(y0)))
     y[0] = y0.copy()
     for i in range(n - 1):
-        h = t[i+1] - t[i]
+        h = t[i + 1] - t[i]
         k1 = func(y[i], t[i], *args).copy()
-        k2 = func(y[i] + k1 * h / 2., t[i] + h / 2., *args).copy()
-        k3 = func(y[i] + k2 * h / 2., t[i] + h / 2., *args).copy()
+        k2 = func(y[i] + k1 * h / 2.0, t[i] + h / 2.0, *args).copy()
+        k3 = func(y[i] + k2 * h / 2.0, t[i] + h / 2.0, *args).copy()
         k4 = func(y[i] + k3 * h, t[i] + h, *args).copy()
-        y[i+1] = y[i] + (h / 6.) * (k1 + 2*k2 + 2*k3 + k4)
+        y[i + 1] = y[i] + (h / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
     return y

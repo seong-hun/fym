@@ -6,27 +6,28 @@
 
 # -- Path setup --------------------------------------------------------------
 
+import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import re
-import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath("../.."))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'Fym'
-copyright = '2021, Seong-hun Kim'
-author = 'Seong-hun Kim'
+project = "Fym"
+copyright = "2021, Seong-hun Kim"
+author = "Seong-hun Kim"
 
 import fym
+
 # The short X.Y version (including .devXXXX, rcX, b1 suffixes if present)
-version = re.sub(r'(\d+\.\d+)\.\d+(.*)', r'\1\2', fym.__version__)
-version = re.sub(r'(\.dev\d+).*?$', r'\1', version)
+version = re.sub(r"(\d+\.\d+)\.\d+(.*)", r"\1\2", fym.__version__)
+version = re.sub(r"(\.dev\d+).*?$", r"\1", version)
 # The full version, including alpha/beta/rc tags.
 release = fym.__version__
 print("%s %s" % (version, release))
@@ -38,19 +39,19 @@ print("%s %s" % (version, release))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'numpydoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.linkcode',
-    'myst_parser',
+    "sphinx.ext.autodoc",
+    "numpydoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.linkcode",
+    "myst_parser",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -63,7 +64,7 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'pydata_sphinx_theme'
+html_theme = "pydata_sphinx_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -76,15 +77,15 @@ html_theme_options = {
 }
 
 html_title = "%s v%s Manual" % (project, version)
-html_static_path = ['_static']
-html_last_updated_fmt = '%b %d, %Y'
+html_static_path = ["_static"]
+html_last_updated_fmt = "%b %d, %Y"
 
 html_use_modindex = True
 html_copy_source = False
 html_domain_indices = False
-html_file_suffix = '.html'
+html_file_suffix = ".html"
 
-htmlhelp_basename = 'fym'
+htmlhelp_basename = "fym"
 
 # If true, links to the reST sources are added to the pages.
 html_show_sourcelink = False
@@ -111,10 +112,9 @@ numpydoc_show_class_members = False
 # Source code links
 # -----------------------------------------------------------------------------
 import inspect
-from os.path import relpath, dirname
+from os.path import dirname, relpath
 
-
-for name in ['sphinx.ext.linkcode', 'numpydoc.linkcode']:
+for name in ["sphinx.ext.linkcode", "numpydoc.linkcode"]:
     try:
         __import__(name)
         extensions.append(name)
@@ -129,18 +129,18 @@ def linkcode_resolve(domain, info):
     """
     Determine the URL corresponding to Python object
     """
-    if domain != 'py':
+    if domain != "py":
         return None
 
-    modname = info['module']
-    fullname = info['fullname']
+    modname = info["module"]
+    fullname = info["fullname"]
 
     submod = sys.modules.get(modname)
     if submod is None:
         return None
 
     obj = submod
-    for part in fullname.split('.'):
+    for part in fullname.split("."):
         try:
             obj = getattr(obj, part)
         except Exception:
@@ -184,4 +184,7 @@ def linkcode_resolve(domain, info):
         linespec = ""
 
     return "https://github.com/fdcl-nrf/fym/blob/v%s/fym/%s%s" % (
-        fym.__version__, fn, linespec)
+        fym.__version__,
+        fn,
+        linespec,
+    )

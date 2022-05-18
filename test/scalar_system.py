@@ -28,11 +28,9 @@ class Env(BaseEnv):
             return False
 
     def derivs(self, t, states, action):
-        x, = states.values()
-        u = - 3*x
-        xdot = {
-            "main": self.systems["main"].deriv(x, u)
-        }
+        (x,) = states.values()
+        u = -3 * x
+        xdot = {"main": self.systems["main"].deriv(x, u)}
         return xdot
 
 
@@ -41,7 +39,7 @@ class ScalarSystem(BaseSystem):
         super().__init__(initial_state=initial_state)
 
     def deriv(self, x, u):
-        xdot = 2*x + u
+        xdot = 2 * x + u
         return xdot
 
 

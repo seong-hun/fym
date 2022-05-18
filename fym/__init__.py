@@ -1,7 +1,6 @@
-from .core import BaseEnv, BaseSystem, Sequential
-from . import parser
-from .utils.linearization import jacob_analytic, jacob_numerical
-from .logging import load, save, Logger
-from .agents.LQR import clqr, dlqr
-from . import config
+from . import config, parser
 from ._version import __version__
+from .agents.LQR import clqr, dlqr
+from .core import BaseEnv, BaseSystem, Sequential
+from .logging import Logger, load, save
+from .utils.linearization import jacob_analytic, jacob_numerical

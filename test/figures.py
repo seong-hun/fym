@@ -1,19 +1,22 @@
-import sys
-import os
 import glob
-import numpy as np
+import os
+import sys
+
 import matplotlib.pyplot as plt
+import numpy as np
 from cycler import cycler
 
 import fym.logging as logging
 
-
 BASE_DATA_DIR = "data"
 
-plt.rc("font", **{
-    "family": "sans-serif",
-    # "sans-serif": ["Helvetica"],
-})
+plt.rc(
+    "font",
+    **{
+        "family": "sans-serif",
+        # "sans-serif": ["Helvetica"],
+    }
+)
 # plt.rc("text", usetex=True)
 plt.rc("lines", linewidth=1.3)
 plt.rc("axes", grid=True)
@@ -62,9 +65,7 @@ def plot_single(data, color="k", name=None):
 
 def plot_mult(dataset, color_cycle=None, names=None):
     if color_cycle is None:
-        color_cycle = cycler(
-            color=plt.rcParams["axes.prop_cycle"].by_key()["color"]
-        )
+        color_cycle = cycler(color=plt.rcParams["axes.prop_cycle"].by_key()["color"])
 
     if names is not None:
         for data, color, name in zip(dataset, color_cycle(), names):

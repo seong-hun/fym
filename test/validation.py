@@ -1,6 +1,7 @@
+import time
+
 import numpy as np
 from scipy.integrate import odeint
-import time
 
 import fym
 import fym.core as core
@@ -29,9 +30,7 @@ class OriginalEnv(core.BaseEnv):
 
     def step(self, action):
         done = self.clock.time_over()
-        info = {
-            "states": self.observe_dict()
-        }
+        info = {"states": self.observe_dict()}
         self.update(action)
         return self.observation(), 0, done, info
 
@@ -84,11 +83,15 @@ def run(env, agent=None, number=1, text=""):
 
     env.close()
 
-    print("\t".join([
-        f"{text}:",
-        f"{number} Runs,",
-        f"Total: {t1 - t0:.4} sec",
-    ]))
+    print(
+        "\t".join(
+            [
+                f"{text}:",
+                f"{number} Runs,",
+                f"Total: {t1 - t0:.4} sec",
+            ]
+        )
+    )
 
     return t1 - t0
 

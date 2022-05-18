@@ -1,18 +1,22 @@
 import os
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 import fym
-import fym.plotting as plotting
 import fym.logging
+import fym.plotting as plotting
 
-
-data = fym.logging.load('data/plot_figures/result.h5')  # a simulation result obtained from fym
+data = fym.logging.load(
+    "data/plot_figures/result.h5"
+)  # a simulation result obtained from fym
 
 # - function 'plot' (compatible with Matplotlib.pyplot)
 data_dict = data
 data_dict["state3d"] = data["state"][:, :3]  # for 3d example
-data_dict["control_shift"] = data["control"] + np.rad2deg(1)  # broadcasting; for 2d example
+data_dict["control_shift"] = data["control"] + np.rad2deg(
+    1
+)  # broadcasting; for 2d example
 # make draw dictionaries
 draw_dict = {
     "state_012_equal": {
@@ -52,8 +56,8 @@ draw_dict = {
     },
 }
 weight_dict = {
-    "control": np.rad2deg(1)*np.ones(2),
-    "control_shift": np.rad2deg(1)*np.ones(2),
+    "control": np.rad2deg(1) * np.ones(2),
+    "control_shift": np.rad2deg(1) * np.ones(2),
     # None: weight = 1. (In this case, default weights are given for e.g., "time" and "state3d")
 }
 save_dir = "./data/plot_figures"

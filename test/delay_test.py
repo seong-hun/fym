@@ -2,46 +2,35 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 import fym
-import fym.core
 import fym.agents.LQR
+import fym.core
 import fym.logging as logging
 
 
 class System(fym.core.BaseSystem):
-    A = np.array([
-        [-1.01887, 0.90506, -0.00215],
-        [0.82225, -1.07741, -0.17555],
-        [0, 0, -1]
-    ])
-    B = np.array([
-        [0],
-        [0],
-        [1]
-    ])
+    A = np.array(
+        [[-1.01887, 0.90506, -0.00215], [0.82225, -1.07741, -0.17555], [0, 0, -1]]
+    )
+    B = np.array([[0], [0], [1]])
     Q = np.diag([10, 10, 1])
     R = np.diag([1])
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.K, *_ = fym.agents.LQR.clqr(
-            self.A, self.B, self.Q, self.R
-        )
+        self.K, *_ = fym.agents.LQR.clqr(self.A, self.B, self.Q, self.R)
 
     def deriv(self, x, u):
         return self.A.dot(x) + self.B.dot(u)
 
     def get_control(self, x):
-        return - self.K.dot(x)
+        return -self.K.dot(x)
 
 
 class Env(fym.core.BaseEnv):
     def __init__(self, T, **kwargs):
         self.system = System([1, -1, 0])
 
-        super().__init__(
-            systems_dict={"main": self.system},
-            **kwargs
-        )
+        super().__init__(systems_dict={"main": self.system}, **kwargs)
 
         self.set_delay([self.system], T)
 
@@ -140,9 +129,9 @@ axes[1].plot(time[dindex], xd2[dindex], color="r")
 axes[2].plot(time[dindex], xd3[dindex], color="r")
 
 trans_time = time[time >= T]
-axes[0].plot(trans_time, x1[:len(trans_time)], "k--", label="Trans")
-axes[1].plot(trans_time, x2[:len(trans_time)], "k--")
-axes[2].plot(trans_time, x3[:len(trans_time)], "k--")
+axes[0].plot(trans_time, x1[: len(trans_time)], "k--", label="Trans")
+axes[1].plot(trans_time, x2[: len(trans_time)], "k--")
+axes[2].plot(trans_time, x3[: len(trans_time)], "k--")
 
 axes[0].legend(*axes[0].get_legend_handles_labels())
 
@@ -153,6 +142,6 @@ ax.plot(time, u, color="k", label="True")
 ud = data["delayed_control"]
 ax.plot(time[dindex], ud[dindex], color="r", label="Delayed")
 
-ax.plot(trans_time, u[:len(trans_time)], "k--", label="Trans")
+ax.plot(trans_time, u[: len(trans_time)], "k--", label="Trans")
 
 plt.show()

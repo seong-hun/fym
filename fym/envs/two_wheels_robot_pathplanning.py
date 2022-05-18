@@ -1,7 +1,8 @@
 """DEPRECATED"""
 import numpy as np
-from fym.models.two_wheels_robot import TwoWheelsRobot3Dof
+
 from fym.core import BaseEnv
+from fym.models.two_wheels_robot import TwoWheelsRobot3Dof
 
 
 class TwoWheelsRobotPathPlanningEnv(BaseEnv):
@@ -19,16 +20,16 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
         controls = dict(two_wheels_robot=control)
         states = self.states.copy()
         next_obs, reward, done, _ = super().step(controls)
-        info = {'states': states, 'next_states': self.states}
+        info = {"states": states, "next_states": self.states}
         return next_obs, reward, done, info
 
     def get_ob(self):
-        states = self.states['TwoWheelsRobot']
+        states = self.states["TwoWheelsRobot"]
         return states
 
     def terminal(self):
-        state = self.states['TwoWheelsRobot']
-        system = self.systems['TwoWheelsRobot']
+        state = self.states["TwoWheelsRobot"]
+        system = self.systems["TwoWheelsRobot"]
         lb, ub = system.state_lower_bound, system.state_upper_bound
         if not np.all([state > lb, state < ub]):
             return True
@@ -43,10 +44,9 @@ class TwoWheelsRobotPathPlanningEnv(BaseEnv):
         if np.asarray(W).ndim == 1:
             W = np.diag(W)
         elif np.asarray(W).ndim > 2:
-            raise ValueError("W must have the dimension less "
-                             "than or equal to 2")
+            raise ValueError("W must have the dimension less " "than or equal to 2")
         return np.sqrt(np.dot(np.dot(v, W), v))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     env = TwoWheelsRobotPathPlanningEnv()

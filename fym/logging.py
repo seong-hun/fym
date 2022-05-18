@@ -14,7 +14,7 @@ class Logger:
         else:
             # To overwite if a file of the same path exists
             self.path = path
-            with h5py.File(self.path, 'w'):
+            with h5py.File(self.path, "w"):
                 pass
 
         self.max_len = int(max_len)
@@ -72,7 +72,7 @@ class Logger:
 
     def flush(self):
         with h5py.File(self.path, "r+") as h5file:
-            _rec_save(h5file, '/', self._buf, self._ind)
+            _rec_save(h5file, "/", self._buf, self._ind)
         self.clear()
 
     def close(self):
@@ -120,7 +120,7 @@ class Logger:
             if isinstance(val, dict):
                 out_dict[key] = self._rec_get(val, index)
             elif not isinstance(val, str):
-                out_dict[key] = val[:index + 1]
+                out_dict[key] = val[: index + 1]
             else:
                 raise ValueError("Unsupported data type")
         return out_dict
@@ -135,12 +135,12 @@ def save(h5file, dic, mode="w", info=None):
                 os.makedirs(dirname, exist_ok=True)
 
             with h5py.File(h5file, mode) as h5file:
-                _rec_save(h5file, '/', dic)
+                _rec_save(h5file, "/", dic)
                 _info_save(h5file, info)
         except ValueError:
-            raise ValueError(f'Cannot save into {type(h5file)} type')
+            raise ValueError(f"Cannot save into {type(h5file)} type")
     else:
-        _rec_save(h5file, '/', dic)
+        _rec_save(h5file, "/", dic)
         _info_save(h5file, info)
 
 
@@ -157,7 +157,7 @@ def _rec_save(h5file, path, dic, index=None):
             if isinstance(val, list):
                 val = np.stack(val)
             if index is not None:
-                val = val[:index + 1]
+                val = val[: index + 1]
             if path + key not in h5file:
                 dset = h5file.create_dataset(
                     path + key,
@@ -169,16 +169,16 @@ def _rec_save(h5file, path, dic, index=None):
             else:
                 dset = h5file[path + key]
                 dset.resize(dset.shape[0] + len(val), axis=0)
-                dset[-len(val):] = val
+                dset[-len(val) :] = val
         elif isinstance(val, dict):
-            _rec_save(h5file, path + key + '/', val, index)
+            _rec_save(h5file, path + key + "/", val, index)
         else:
-            raise ValueError(f'Cannot save {type(val)} type')
+            raise ValueError(f"Cannot save {type(val)} type")
 
 
 def load(path, with_info=False):
-    with h5py.File(path, 'r') as h5file:
-        ans = _rec_load(h5file, '/')
+    with h5py.File(path, "r") as h5file:
+        ans = _rec_load(h5file, "/")
         if with_info:
             return ans, pickle.loads(h5file.attrs["_info"].tostring())
         else:
@@ -191,38 +191,41 @@ def _rec_load(h5file, path):
         if isinstance(item, h5py._hl.dataset.Dataset):
             ans[key] = item[()]
         elif isinstance(item, h5py._hl.group.Group):
-            ans[key] = _rec_load(h5file, path + key + '/')
+            ans[key] = _rec_load(h5file, path + key + "/")
     return ans
 
 
-if __name__ == '__main__':
-    logger = Logger('sample', max_len=5)
+if __name__ == "__main__":
+    logger = Logger("sample", max_len=5)
 
     data = {
-        'state': {
-            'main_system': np.array([0., 0., 0., 0.]),
-            'reference_system': np.array([1., 1., 1., 1.]),
-            'adaptive_system': np.array([
-                [2., 2.],
-                [2., 2.],
-                [2., 2.],
-                [2., 2.],
-                [2., 2.]])
+        "state": {
+            "main_system": np.array([0.0, 0.0, 0.0, 0.0]),
+            "reference_system": np.array([1.0, 1.0, 1.0, 1.0]),
+            "adaptive_system": np.array(
+                [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
+            ),
         },
-        'action': {
-            'M': np.array([
-                [1., 1., 1., 1., 1.],
-                [1., 1., 1., 1., 1.],
-                [1., 1., 1., 1., 1.],
-                [1., 1., 1., 1., 1.],
-                [1., 1., 1., 1., 1.]]),
-            'N': np.array([
-                [0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0.]])
-        }
+        "action": {
+            "M": np.array(
+                [
+                    [1.0, 1.0, 1.0, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0, 1.0],
+                ]
+            ),
+            "N": np.array(
+                [
+                    [0.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0, 0.0],
+                ]
+            ),
+        },
     }
 
     for _ in range(10):
