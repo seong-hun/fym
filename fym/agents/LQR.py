@@ -1,10 +1,11 @@
 import numpy as np
-import scipy.linalg as lin
 import numpy.linalg as nla
+import scipy.linalg as lin
 
 
-def clqr(A: np.array, B: np.array, Q: np.array, R: np.array, with_eigs=False) \
-        -> np.array:
+def clqr(
+    A: np.array, B: np.array, Q: np.array, R: np.array, with_eigs=False
+) -> np.array:
     P = lin.solve_continuous_are(A, B, Q, R)
     if np.size(R) == 1:
         K = (np.transpose(B).dot(P)) / R
@@ -19,8 +20,9 @@ def clqr(A: np.array, B: np.array, Q: np.array, R: np.array, with_eigs=False) \
         return K, P
 
 
-def dlqr(A: np.array, B: np.array, Q: np.array, R: np.array, with_eigs=False) \
-        -> np.array:
+def dlqr(
+    A: np.array, B: np.array, Q: np.array, R: np.array, with_eigs=False
+) -> np.array:
     P = lin.solve_discrete_are(A, B, Q, R)
     if np.size(R) == 1:
         K = (np.transpose(B).dot(P)) / R

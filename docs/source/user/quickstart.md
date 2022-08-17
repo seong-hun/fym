@@ -1,53 +1,4 @@
-# Fym
-
-**Fym** is a general perpose dynamical simulator based on
-[Python](https://www.python.org). The origin of **Fym** is a flight simulator
-that requires highly accurate integration (e.g. [Runge-Kutta-Fehlberg
-method](https://en.wikipedia.org/wiki/Runge–Kutta–Fehlberg_method) or simply
-`rk45`), and a set of components that interact each other. For the integration,
-**Fym** supports various [Scipy
-integration](https://docs.scipy.org/doc/scipy/reference/tutorial/integrate.html)
-methods in addition with own fixed-step solver such as `rk4`. Also, **Fym** has
-a novel structure that provides modular design of each component of systems,
-which is much simiar to
-[Simulink](https://kr.mathworks.com/products/simulink.html).
-
-The **Fym** project began with the development of accurate flight simulators
-that aerospace engineers could use with [OpenAI Gym](https://gym.openai.com) to
-study reinforcement learning. This is why the package name is **Fym** (Flight +
-Gym). Although it is now a general purpose dynamical simulator, many codes and
-ideas have been devised in the OpenAI Gym.
-
-For more information, see:
-* [Documentation](https://seong-hun.github.io/fym-pages/build/html/index.html#)
-
-# Installation
-
-There are two ways to install **Fym**.
-
-## Manual installation (recommended)
-
-As **Fym** is the ongoing project, many changes are expected in the short time.
-We periodically upload stable versions to [PyPi](https://pypi.org), but if you
-want to use the latest features of **Fym** development, we recommend installing
-**Fym** manually, as follows.
-
-```bash
-git clone https://github.com/fdcl-nrf/fym.git
-cd fym
-pip install -e .
-```
-
-Note that `master` branch contains all the latest features that can be used
-immediately as the default development branch.
-
-## Install with PyPi
-
-If you want to install the most stable version of **Fym** uploaded in PyPi, you
-can do it.
-
-```bash
-pip install fym
+```{currentmodule} fym
 ```
 
 # Basic Usage
@@ -71,11 +22,11 @@ env.close()
 
 As you can see, this is the legacy of the OpenAI Gym.
 
-`Env` is like a [Blank
+{any}`BaseEnv` is like a [Blank
 Model](https://www.mathworks.com/help/simulink/gs/create-a-simple-model.html#bu3nd7o-1)
 in Simulink. Every setup including dynamics, simulation time-step, final time,
-integration method should be defined in this main class. The `Env` class is
-initialized with the following structure.
+integration method should be defined in this main class. The `Env` that
+inherits {any}`BaseEnv` class is initialized with the following structure.
 
 ```python
 from fym.core import BaseEnv, BaseSystem
@@ -88,11 +39,11 @@ class Env(BaseEnv):
 The arguments of `super().__init__` establishes the integration method
 consisting of a time step (`dt`), a final time (`max_t`), etc.
 
-## Registration of `BaseSystem`
+## Registration of {any}`BaseSystem`
 
 Now, you can add dynamical systems as follows. From now on, dynamical system
 means a system that requires an integration in the simulation, denoted by
-`BaseSystem`.
+{any}`BaseSystem`.
 
 ```python
 import numpy as np
@@ -105,28 +56,28 @@ class Env(BaseEnv):
         self.actuator = BaseSystem()
 ```
 
-There are three ways to initalize `BaseSystem` to the main Blank Model, `Env`.
-The first way is give it a shape as `BaseSystem(shape=(3, 2))`. This
-initializes the system with a numpy zeros with a shape `(3, 2)`. Another way is
-directly give it an initial state as `BaseSystem(np.vstack((0, 0, -1)))`.
-Finally, it can be initialized without any argument, where it's default initial
-state is a numpy zeros with a shape `(1, 1)`.
+There are three ways to initalize {any}`BaseSystem` to the main Blank
+Model, `Env`.  The first way is give it a shape as `BaseSystem(shape=(3, 2))`.
+This initializes the system with a numpy zeros with a shape `(3, 2)`. Another
+way is directly give it an initial state as `BaseSystem(np.vstack((0, 0,
+-1)))`.  Finally, it can be initialized without any argument, where it's
+default initial state is a numpy zeros with a shape `(1, 1)`.
 
-## States of `BaseSystem`
+## States of {any}`BaseSystem`
 
-Because `BaseSystem` is a dynamical system, it has a state. The state is
+Because {any}`BaseSystem` is a dynamical system, it has a state. The state is
 initialized with the [registration of the
 instance](https://www.notion.so/63f0df1d92a340299a10d64434c03c43) in
-`BaseEnv.__init__` method. It is basically a list or a numpy array with any
-shape. After the registration, states of each `BaseSystem` can be accessed in
-anywhere, with `BaseSystem.state` variable.
+{any}`BaseEnv.__init__` method. It is basically a list or a numpy array with any
+shape. After the registration, states of each {any}`BaseSystem` can be accessed
+in anywhere, with {any}`BaseSystem.state` variable.
 
 ```python
 env = Env()
 print(env.plant.state)
 ```
 
-## Setup the dynamics in `BaseEnv.set_dot`
+## Setup the dynamics in {any}`BaseEnv.set_dot`
 
 Every dynamcal systems, i.e., `BaseSystem`, has its own dynamics, or a
 derivative. For example, there might be a stable linear system: `ẋ = - x`.

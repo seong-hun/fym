@@ -6,11 +6,7 @@ from fym.utils import rot
 
 def hat(v):
     v1, v2, v3 = v.squeeze()
-    return np.array([
-        [0, -v3, v2],
-        [v3, 0, -v1],
-        [-v2, v1, 0]
-    ])
+    return np.array([[0, -v3, v2], [v3, 0, -v1], [-v2, v1, 0]])
 
 
 class Quadrotor(BaseEnv):
@@ -30,28 +26,26 @@ class Quadrotor(BaseEnv):
             The rotation matrix from the body-fixed frame to the inertial frame
             R = C_{i/b} = C_{b/i}^T
     """
+
     g = 9.81  # m/s^2
     e3 = np.vstack((0, 0, 1))
     J = np.diag([0.0820, 0.0845, 0.1377])
     m = 4.34  # Mass
     d = 0.315  # The distance from the center of mass to the center of each rotor
     ctf = 8.004e-4  # The torque coefficient. ``torque_i = (-1)^i ctf f_i``
-    B = np.array(
-        [[1, 1, 1, 1],
-         [0, -d, 0, d],
-         [d, 0, -d, 0],
-         [-ctf, ctf, -ctf, ctf]]
-    )
+    B = np.array([[1, 1, 1, 1], [0, -d, 0, d], [d, 0, -d, 0], [-ctf, ctf, -ctf, ctf]])
     Binv = np.linalg.pinv(B)
 
     name = "quadrotor"
 
-    def __init__(self,
-                 pos=np.zeros((3, 1)),
-                 vel=np.zeros((3, 1)),
-                 R=np.eye(3),
-                 omega=np.zeros((3, 1)),
-                 config="Quadrotor"):
+    def __init__(
+        self,
+        pos=np.zeros((3, 1)),
+        vel=np.zeros((3, 1)),
+        R=np.eye(3),
+        omega=np.zeros((3, 1)),
+        config="Quadrotor",
+    ):
         super().__init__()
         self.pos = BaseSystem(pos)
         self.vel = BaseSystem(vel)
@@ -101,3 +95,75 @@ class Quadrotor(BaseEnv):
     def R2angle(self, R):
         """angle: phi, theta, psi in radian"""
         return rot.dcm2angle(R.T)[::-1]
+
+
+class Multicopter(fym.BaseEnv):
+    """Physical constants"""
+
+    g = 9.8  # [m/s2]
+    rho = 1.225
+
+    """ Physical properties """
+    m = 0.5  # [kg]
+    J = np.diag([5.9e-3, 5.9e-3, 1.16e-2])  # [kg.m2]
+    Jr = 1.5e-5  # not found
+    kt = 3.13e-5  # [N.s2 / rad2]
+    kd = 4.8e-3 * kt  # [N.m.s2 / rad2]
+    l = 0.255  # [m]
+    K1 = np.diag([6e-3, 6e-3, 6e-3])  # [N.s/m]
+    K2 = np.diag([6e-3, 6e-3, 6e-3])  # [N.m.s/rad]
+    tau = 0.02  # [sec]
+
+    Jinv = np.linalg.inv(J)
+    e3 = np.vstack((0, 0, 1))
+
+    rotorspeed_min = 3000 * 2 * np.pi / 60  # [rad/s]
+    rotorspeed_max = 120000 * 2 * np.pi / 60  # [rad/s]
+
+    """ Configuration
+          ^ x
+          |
+     -(2)   (1)+
+    -     x     -> y
+     +(3)   (4)-
+          |
+    """
+
+    # Control allocation matrix
+    # u = [F; M]
+    c = kd / kt
+    Ar = np.array(  # u = Ar @ F, F = (F1, F2, F3, F4)
+        [[1, 1, 1, 1], [0, -l, 0, l], [-l, 0, l, 0], [c, -c, c, -c]]
+    )
+    Arinv = np.linalg.inv(Ar)  # F = Arinv @ u
+    Br = Arinv / kt  # rotorspeed = sqrt(Br @ u)
+
+    # Fault
+    Lambda = np.eye(4)  # LoE matrix
+    # actual input: u = Ar @ Lambda @ Arinv @ uc
+
+    def __init__(
+        self,
+        inertiacoord="NED",
+        bodycoord="NED",
+        rotorindexing=[3, 2, 1, 0],
+        rotordir="NPNP",
+        rotorrotation=0,
+    ):
+        """Multicopter class
+
+        Parameters
+        ----------
+        inertiacoord : str, optional
+            "NED" (default) or "ENU".
+        bodycoord : str, optional
+            "NED" (default) or "ENU".
+        rotorindexing : list, optional
+            The index of the rotors starting from the x-axis, rotating around
+            the z-axis.
+        rotordir : list, str, optional
+            The list or str of characters "P" or "N", which represents the
+            rotation directions of each rotor. "P" is in the z-axis direction.
+        rotorrotation : float, optional
+            The rotor orientation rotated around z-axis in degrees.
+        """
