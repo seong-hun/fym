@@ -1,5 +1,6 @@
 import numpy as np
-from numpy import cos, sin
+from numpy import cos, sin, tan
+
 
 """
 Variables:
@@ -196,3 +197,46 @@ def sph2cart2(r, azimuth, polar):
 def hat(v):
     v1, v2, v3 = np.ravel(v)
     return np.array([[0, -v3, v2], [v3, 0, -v1], [-v2, v1, 0]])
+
+
+def omega2deuler(omega, phi, theta):
+    C = np.array([
+        [1, tan(theta) * sin(phi), tan(theta) * cos(phi)],
+        [0, cos(phi), -sin(phi)],
+        [0, sin(phi) / cos(theta), cos(phi) / cos(theta)]
+    ])
+    deuler = C @ omega
+    return deuler
+
+
+def omega2dquat(omega, quat):
+    p, q, r = omega.ravel()
+    Q = np.array([
+        [0, -p, -q, -r],
+        [p, 0, r, -q],
+        [q, -r, 0, p],
+        [r, q, -p, 0]
+    ])
+    dquat = Q @ quat
+    return dquat
+
+def omega2deuler(omega, phi, theta):
+    C = np.array([
+        [1, tan(theta) * sin(phi), tan(theta) * cos(phi)],
+        [0, cos(phi), -sin(phi)],
+        [0, sin(phi) / cos(theta), cos(phi) / cos(theta)]
+    ])
+    deuler = C @ omega
+    return deuler
+
+
+def omega2dquat(omega, quat):
+    p, q, r = omega.ravel()
+    Q = np.array([
+        [0, -p, -q, -r],
+        [p, 0, r, -q],
+        [q, -r, 0, p],
+        [r, q, -p, 0]
+    ])
+    dquat = Q @ quat
+    return dquat
