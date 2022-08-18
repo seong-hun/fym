@@ -278,9 +278,10 @@ class BaseEnv:
 
     def ode_wrapper(self, func):
         @functools.wraps(func)
-        def wrapper(y, t, *args):
+        def wrapper(y, t, *args, **kwargs):
             self._state[:] = y[:, None]
-            func(t, *args)
+            func(t, *args, **kwargs)
+            y[:, None] = self.state
             return self._dot.ravel()
 
         return wrapper
