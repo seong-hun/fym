@@ -1,4 +1,4 @@
-import ray.tune.suggest.variant_generator
+import ray.tune.search.variant_generator
 
 
 def generate_variants(configs, repeat=1):
@@ -6,5 +6,7 @@ def generate_variants(configs, repeat=1):
         config
         for tune_config in configs
         for _ in range(repeat)
-        for _, config in ray.tune.suggest.variant_generator.generate_variants(tune_config)
+        for _, config in ray.tune.search.variant_generator.generate_variants(
+            tune_config
+        )
     ]
