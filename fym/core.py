@@ -93,6 +93,9 @@ class BaseEnv:
             if isinstance(value, BaseEnv) or value._name is None:
                 value._name = name
             self.indexing()
+
+            self.__dict__.pop(name, None)
+
             return
         elif isinstance(value, Delay):
             delays = self.__dict__.get("_delays")
@@ -101,6 +104,9 @@ class BaseEnv:
                     "cannot assign delays before BaseEnv.__init__() call"
                 )
             delays[name] = value
+
+            self.__dict__.pop(name, None)
+
             return
         elif isinstance(value, logging.Logger):
             value._inner = True
