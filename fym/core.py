@@ -152,7 +152,7 @@ class BaseEnv:
 
     @property
     def dot(self):
-        return self._dot
+        return self._dot.copy()
 
     @dot.setter
     def dot(self, dot):
@@ -402,7 +402,7 @@ class BaseSystem:
 
     @property
     def dot(self):
-        return self._dot
+        return self._dot.copy()
 
     @dot.setter
     def dot(self, dot):
