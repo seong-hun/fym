@@ -5,6 +5,7 @@ import tqdm
 from scipy.integrate import odeint, solve_ivp
 from scipy.interpolate import interp1d
 
+import fym
 import fym.logging as logging
 
 
@@ -70,6 +71,9 @@ class BaseEnv:
         self.tqdm_bar = None
         self._registered = False
 
+        with fym.no_register():
+            self._base_env = self
+
     def __getattr__(self, name):
         val = self.__dict__.get("_systems_dict", {}).get(name, None)
         if val:
@@ -96,8 +100,15 @@ class BaseEnv:
 
             systems[name] = value
             value._registered = True
+
+            self.update_base(base=self)
+
             if isinstance(value, BaseEnv) or value._name is None:
                 value._name = name
+
+            if isinstance(value, BaseEnv):
+                value.clock = self.clock
+
             self.indexing()
 
             self.__dict__.pop(name, None)
@@ -130,6 +141,13 @@ class BaseEnv:
             v_str = system.__repr__(base=base)
             result.append(v_str)
         return "\n".join(result)
+
+    @property
+    def base_env(self):
+        if self._base_env is self:
+            raise ValueError("There is no base Env")
+        else:
+            return self._base_env
 
     @property
     def systems(self):
@@ -165,6 +183,17 @@ class BaseEnv:
     @dot.setter
     def dot(self, dot):
         self._dot[:] = dot
+
+    @property
+    def t(self):
+        return self.clock.get()
+
+    def update_base(self, base):
+        for system in self._systems_list:
+            if isinstance(system, BaseEnv):
+                system.update_base(base)
+            with fym.no_register():
+                system._base_env = base
 
     def indexing(self):
         start = 0
@@ -280,6 +309,7 @@ class BaseEnv:
         return info, done
 
     def _record(self, t, y, **kwargs):
+        self.clock.set(t)
         self._state[:] = y[:, None]
         data = {}
         if self._log_set_dot:
@@ -293,6 +323,7 @@ class BaseEnv:
     def ode_wrapper(self, func):
         @functools.wraps(func)
         def wrapper(y, t, *args, **kwargs):
+            self.clock.set(t)
             self._state[:] = y[:, None]
             func(t, *args, **kwargs)
             y[:, None] = self.state
@@ -381,6 +412,7 @@ class BaseSystem:
 
         self.has_delay = False
         self._registered = False
+        self._base_env = None
 
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
@@ -390,6 +422,13 @@ class BaseSystem:
             result += ["dot:", f"{self.dot}"]
         result.append("")
         return "\n".join(result)
+
+    @property
+    def base_env(self) -> BaseEnv:
+        if self._base_env is None:
+            raise ValueError("There is no base Env")
+        else:
+            return self._base_env
 
     @property
     def state(self):
@@ -456,15 +495,19 @@ class Clock:
         self.index = 0
         self.max_len = int(np.ceil(max_t / dt))
         self._max_index = len(self.tspan) - 1
+        self._t = 0
 
     def reset(self, t=0.0):
         self.index = np.flatnonzero(self.tspan == t)[0].item()
+        self._t = 0
 
     def _tick_major(self):
         self._major_index += 1
         self._minor_index = 0
         if self.index > self._max_index:
             self.index = self._max_index
+
+        self.set(self.tspan[self.index])
 
     def _tick_minor(self):
         assert self._minor_index < self._interval
@@ -483,7 +526,10 @@ class Clock:
         self._minor_index = ind % self._interval
 
     def get(self):
-        return self.tspan[self.index]
+        return self._t
+
+    def set(self, t):
+        self._t = t
 
     def time_over(self, t=None):
         if t is None:
