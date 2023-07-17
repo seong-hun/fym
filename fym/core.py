@@ -82,12 +82,18 @@ class BaseEnv:
         return super().__getattribute__(name)
 
     def __setattr__(self, name, value):
+        if not fym._register_mode:
+            super().__setattr__(name, value)
+            return
+
         if isinstance(value, (BaseSystem, BaseEnv)) and not value._registered:
             systems = self.__dict__.get("_systems_dict")
+
             if systems is None:
                 raise AttributeError(
                     "cannot assign system before BaseEnv.__init__() call"
                 )
+
             systems[name] = value
             value._registered = True
             if isinstance(value, BaseEnv) or value._name is None:
@@ -97,6 +103,7 @@ class BaseEnv:
             self.__dict__.pop(name, None)
 
             return
+
         elif isinstance(value, Delay):
             delays = self.__dict__.get("_delays")
             if delays is None:
@@ -108,6 +115,7 @@ class BaseEnv:
             self.__dict__.pop(name, None)
 
             return
+
         elif isinstance(value, logging.Logger):
             value._inner = True
 
@@ -533,3 +541,14 @@ def rk4(func, y0, t, args=()):
         k4 = func(y[i] + k3 * h, t[i] + h, *args).copy()
         y[i + 1] = y[i] + (h / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
     return y
+
+
+class no_register:
+    def __init__(self):
+        pass
+
+    def __enter__(self):
+        fym._register_mode = False
+
+    def __exit__(self, *args):
+        fym._register_mode = True
