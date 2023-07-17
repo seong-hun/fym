@@ -9,7 +9,68 @@ import fym
 import fym.logging as logging
 
 
-class BaseEnv:
+class Component:
+    def __init__(self):
+        self._name = self.__class__.__name__
+        self._base_env = self
+        self._parent = self
+
+    @property
+    def base_env(self):
+        if self._base_env is self:
+            raise ValueError("There is no base Env")
+        else:
+            return self._base_env
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, parent):
+        with fym.no_register():
+            self._parent = parent
+
+        self._update_base()
+
+    def _update_base(self):
+        parent = self.parent
+        while parent.parent is not parent:
+            parent = parent.parent
+
+        self._base_env = parent
+
+
+class Children:
+    def __init__(self):
+        self._components_dict = dict()
+        self._components = self._components_dict.values()
+
+        self._systems_dict = dict()
+        self._systems_list = self._systems_dict.values()
+
+    def add(self, name, value):
+        if isinstance(value, (System, Env)):
+            self._systems_dict[name] = value
+        elif isinstance(value, Component):
+            self._components_dict[name] = value
+        else:
+            raise ValueError(f"value should be component")
+
+        if isinstance(value, Env) or value._name is None:
+            value._name = name
+
+    def find(self, name):
+        return self._components_dict.get(name, None) or self._systems_dict.get(
+            name, None
+        )
+
+    @property
+    def systems(self):
+        return self._systems_list
+
+
+class Env(Component):
     """A base environment class."""
 
     def __init__(
@@ -25,9 +86,9 @@ class BaseEnv:
         name=None,
     ):
         """Initialize."""
+        super().__init__()
         self._name = name or self.__class__.__name__
-        self._systems_dict = dict()
-        self._systems_list = self._systems_dict.values()
+        self._children = Children()
 
         self._delays = dict()
         self.delays = self._delays.values()
@@ -75,59 +136,38 @@ class BaseEnv:
             self._base_env = self
 
     def __getattr__(self, name):
-        val = self.__dict__.get("_systems_dict", {}).get(name, None)
-        if val:
+        if val := self._children.find(name):
             return val
-
-        val = self.__dict__.get("_delays", {}).get(name, None)
-        if val:
-            return val
-
-        return super().__getattribute__(name)
+        else:
+            return super().__getattribute__(name)
 
     def __setattr__(self, name, value):
         if not fym._register_mode:
             super().__setattr__(name, value)
             return
 
-        if isinstance(value, (BaseSystem, BaseEnv)) and not value._registered:
-            systems = self.__dict__.get("_systems_dict")
+        if isinstance(value, Component):
+            if hasattr(self, "_children"):
+                raise AttributeError("cannot assign system before Env.__init__() call")
 
-            if systems is None:
-                raise AttributeError(
-                    "cannot assign system before BaseEnv.__init__() call"
+            elif value.parent is not value:
+                raise ValueError(
+                    f"{value._name} has already been assigned to {value.parent}"
                 )
 
-            systems[name] = value
-            value._registered = True
+            else:
+                self._children.add(name, value)
+                value.parent = self
 
-            self.update_base(base=self)
+                if isinstance(value, Env):
+                    value.clock = self.clock
 
-            if isinstance(value, BaseEnv) or value._name is None:
-                value._name = name
-
-            if isinstance(value, BaseEnv):
-                value.clock = self.clock
-
-            self.indexing()
-
-            self.__dict__.pop(name, None)
+                self.indexing()
+                self.__dict__.pop(name, None)
 
             return
 
-        elif isinstance(value, Delay):
-            delays = self.__dict__.get("_delays")
-            if delays is None:
-                raise AttributeError(
-                    "cannot assign delays before BaseEnv.__init__() call"
-                )
-            delays[name] = value
-
-            self.__dict__.pop(name, None)
-
-            return
-
-        elif isinstance(value, logging.Logger):
+        if isinstance(value, logging.Logger):
             value._inner = True
 
         super().__setattr__(name, value)
@@ -137,7 +177,7 @@ class BaseEnv:
         base = base + [name]
         result = []
 
-        for system in self._systems_list:
+        for system in self.systems:
             v_str = system.__repr__(base=base)
             result.append(v_str)
         return "\n".join(result)
@@ -151,7 +191,7 @@ class BaseEnv:
 
     @property
     def systems(self):
-        return self._systems_list
+        return self._children.systems
 
     @property
     def systems_dict(self):
@@ -190,20 +230,20 @@ class BaseEnv:
 
     def update_base(self, base):
         for system in self._systems_list:
-            if isinstance(system, BaseEnv):
+            if isinstance(system, Env):
                 system.update_base(base)
             with fym.no_register():
                 system._base_env = base
 
     def indexing(self):
         start = 0
-        for system in self._systems_list:
+        for system in self.systems:
             system.state_size = functools.reduce(lambda a, b: a * b, system.state_shape)
             system.flat_index = slice(start, start + system.state_size)
             start += system.state_size
 
         self.state_shape = (
-            sum([system.state_size for system in self._systems_list]),
+            sum([system.state_size for system in self.systems]),
             1,
         )
 
@@ -212,7 +252,7 @@ class BaseEnv:
         self.distributing()
 
     def distributing(self):
-        for system in self._systems_list:
+        for system in self.systems:
             system._state, system.state = (
                 self._state[system.flat_index].reshape(system.state_shape),
                 system._state,
@@ -221,23 +261,23 @@ class BaseEnv:
             system.distributing()
 
     def reset(self):
-        for system in self._systems_list:
+        for system in self.systems:
             system.reset()
         self.clock.reset()
 
     def observe_list(self, state=None):
         res = []
         if state is None:
-            for system in self._systems_list:
-                if isinstance(system, BaseSystem):
+            for system in self.systems:
+                if isinstance(system, System):
                     res.append(system.state)
-                elif isinstance(system, BaseEnv):
+                elif isinstance(system, Env):
                     res.append(system.observe_list())
         else:
-            for system in self._systems_list:
-                if isinstance(system, BaseSystem):
+            for system in self.systems:
+                if isinstance(system, System):
                     res.append(state[system.flat_index].reshape(system.state_shape))
-                elif isinstance(system, BaseEnv):
+                elif isinstance(system, Env):
                     res.append(system.observe_list(state[system.flat_index]))
         return res
 
@@ -245,15 +285,15 @@ class BaseEnv:
         res = {}
         if state is None:
             for name, system in self._systems_dict.items():
-                if isinstance(system, BaseSystem):
+                if isinstance(system, System):
                     res[name] = system.state
-                elif isinstance(system, BaseEnv):
+                elif isinstance(system, Env):
                     res[name] = system.observe_dict()
         else:
             for name, system in self._systems_dict.items():
-                if isinstance(system, BaseSystem):
+                if isinstance(system, System):
                     res[name] = state[system.flat_index].reshape(system.state_shape)
-                elif isinstance(system, BaseEnv):
+                elif isinstance(system, Env):
                     res[name] = system.observe_dict(state[system.flat_index])
         return res
 
@@ -262,10 +302,10 @@ class BaseEnv:
             res = self.state
         else:
             res = []
-            for system in self._systems_list:
-                if isinstance(system, BaseSystem):
+            for system in self.systems:
+                if isinstance(system, System):
                     res.append(state[system.flat_index].reshape(-1, 1))
-                elif isinstance(system, BaseEnv):
+                elif isinstance(system, Env):
                     res.append(system.observe_vec(state[system.flat_index]))
             res = np.vstack(res)
         return res
@@ -335,8 +375,8 @@ class BaseEnv:
         for delay in self.delays:
             delay.update(t_hist, ode_hist)
 
-        for system in self._systems_list:
-            if isinstance(system, BaseEnv):
+        for system in self.systems:
+            if isinstance(system, Env):
                 system.update_delays(t_hist, ode_hist)
 
     def set_dot(self, time, *args):
@@ -394,15 +434,16 @@ class BaseEnv:
                 self.tqdm_bar.set_description(desc)
 
 
-class BaseSystem:
+class System(Component):
     """A base system class.
 
     Use `state` attribute.
-    However, `BaseEnv.set_dot` is the method.
+    However, `Env.set_dot` is the method.
 
     """
 
     def __init__(self, initial_state=None, shape=(1, 1), name=None):
+        super().__init__()
         if initial_state is None:
             initial_state = np.zeros(shape)
         self._initial_state = np.copy(np.atleast_1d(initial_state))
@@ -412,7 +453,6 @@ class BaseSystem:
 
         self.has_delay = False
         self._registered = False
-        self._base_env = None
 
     def __repr__(self, base=[]):
         name = self._name or self.__class__.__name__
@@ -422,13 +462,6 @@ class BaseSystem:
             result += ["dot:", f"{self.dot}"]
         result.append("")
         return "\n".join(result)
-
-    @property
-    def base_env(self) -> BaseEnv:
-        if self._base_env is None:
-            raise ValueError("There is no base Env")
-        else:
-            return self._base_env
 
     @property
     def state(self):
@@ -471,16 +504,16 @@ class BaseSystem:
             self.delay.update(t_hist, ode_hist)
 
 
-class Sequential(BaseEnv):
+class Sequential(Env):
     def __init__(self, *args, **kwargs):
         super().__init__()
         nargs = len(str(len(args)))
         for i, arg in enumerate(args):
-            assert isinstance(arg, (BaseEnv, BaseSystem))
+            assert isinstance(arg, (Env, System))
             setattr(self, f"{arg._name}_{i:0{nargs}d}", arg)
 
         for k, v in kwargs.items():
-            assert isinstance(v, (BaseEnv, BaseSystem))
+            assert isinstance(v, (Env, System))
             setattr(self, k, v)
 
 
