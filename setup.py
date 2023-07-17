@@ -20,10 +20,10 @@ else:
 setup(
     name="fym",
     version=verstr,
-    url="https://github.com/fdcl-nrf/fym",
-    author="SNU FDCL",
+    url="https://github.com/seong-hun/fym",
+    author="Seong-hun Kim",
     author_email="kshoon92@gmail.com",
-    description="SNU FDCL Fym: Flight simulator for various purpose",
+    description="Fym: An object-oriented simulator for dynamic systems",
     long_description=long_description,
     long_description_content_type="text/markdown",
     include_package_data=True,
